@@ -1,6 +1,6 @@
 # cliffordvickrey/malarkey
 
-[![Build Status](https://travis-ci.com/cliffordvickrey/dogs-playing-poker.svg?branch=master)](https://travis-ci.com/cliffordvickrey/malarkey/)
+[![Build Status](https://travis-ci.com/cliffordvickrey/malarkey.svg?branch=master)](https://travis-ci.com/cliffordvickrey/malarkey/)
 [![Coverage Status](https://coveralls.io/repos/github/cliffordvickrey/malarkey/badge.svg)](https://coveralls.io/github/cliffordvickrey/malarkey)
 
 This package generates nonsensical but realistic-sounding text (malarkey!) using a simple Markov chain algorithm.
