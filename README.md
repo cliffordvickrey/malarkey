@@ -40,7 +40,7 @@ var_dump($output); // e.g. I'll by that for two dollars!
 Command line text generation utilities are also available. For help, run this in your project folder:
 
 ```bash
-$ php vendor/bin/malarkey.php
+$ php vendor/bin/malarkey
 ```
 
 ### ChainGenerator@generateChain

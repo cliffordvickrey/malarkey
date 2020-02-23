@@ -4,7 +4,7 @@
     "type": "library",
     "license": "MIT",
     "keywords": [
-        "Markov chain",
+        "markov chain",
         "text generator"
     ],
     "authors": [
@@ -33,7 +33,7 @@
     "bin": ["bin/malarkey"],
     "scripts": {
         "analyze": "phpstan analyse bin src tests/src --level 7",
-        "malarkey": "@php bin/malarkey.php",
+        "malarkey": "@php bin/malarkey",
         "test": "phpunit"
     }
 }
