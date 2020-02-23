@@ -10,18 +10,19 @@ use CliffordVickrey\Malarkey\Exception\TypeException;
 use CliffordVickrey\Malarkey\Generator\ChainGenerator;
 use CliffordVickrey\Malarkey\Generator\TextGenerator;
 
-require_once __DIR__ . '/../vendor/autoload.php';
-
 call_user_func(function (array $arguments): void {
+    foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php'] as $file) {
+        if (file_exists($file)) {
+            require_once $file;
+            break;
+        }
+    }
+
     $arguments = array_values($arguments);
     $returnCode = 0;
     $output = '';
 
     try {
-        if ('cli' !== PHP_SAPI) {
-            throw new RuntimeException('This script is command-line only');
-        }
-
         if (0 === count($arguments)) {
             throw new RuntimeException('Failed to parse command line arguments');
         }
