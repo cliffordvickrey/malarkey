@@ -7,11 +7,11 @@ namespace CliffordVickrey\Malarkey\MarkovChain;
 interface ChainInterface
 {
     /**
-     * Returns the number of words in a given state of a Markov chain. The higher the number, the more "coherent" the
-     * text output will be
+     * Returns the number of words to look back when resolving the next sequence in the Markov chain. The higher the
+     * number, the more coherent will be the randomly-generated text
      * @return int
      */
-    public function getCoherence(): int;
+    public function getLookBack(): int;
 
     /**
      * Returns the frequencies of the next word occurrences in the chain, by a given chain state.

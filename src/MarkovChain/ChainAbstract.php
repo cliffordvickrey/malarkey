@@ -19,7 +19,7 @@ use function unserialize;
 abstract class ChainAbstract implements ChainInterface, Serializable
 {
     /** @var int */
-    private $coherence = 0;
+    private $lookBack = 0;
     /** @var array<int, array> */
     private $chain = [];
     /** @var array<string, array> */
@@ -41,7 +41,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             $this->bindLinkToChain($link, $dictionary);
         }
 
-        if ($this->coherence < 1) {
+        if ($this->lookBack < 1) {
             throw new InvalidArgumentException('Expected at least one link in the Markov chain');
         }
     }
@@ -60,11 +60,11 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             throw new InvalidArgumentException('Link must have at least one word');
         }
 
-        if (!$this->coherence) {
-            $this->coherence = $count;
-        } elseif ($count !== $this->coherence) {
+        if (!$this->lookBack) {
+            $this->lookBack = $count;
+        } elseif ($count !== $this->lookBack) {
             throw new InvalidArgumentException(
-                sprintf('Expected link to have %d word(s); got %d', $this->coherence, $count)
+                sprintf('Expected link to have %d word(s); got %d', $this->lookBack, $count)
             );
         }
 
@@ -122,7 +122,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     public function serialize()
     {
         return serialize([
-            'coherence' => $this->coherence,
+            'lookBack' => $this->lookBack,
             'chain' => $this->chain,
             'frequencies' => $this->frequencies,
             'startingWordSequences' => $this->startingWordSequences,
@@ -146,9 +146,9 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     {
         $unSerialized = unserialize($serialized);
 
-        $coherence = $unSerialized['coherence'] ?? null;
-        if (!is_int($coherence)) {
-            throw TypeException::fromVariable('coherence', 'int', $coherence);
+        $lookBack = $unSerialized['lookBack'] ?? null;
+        if (!is_int($lookBack)) {
+            throw TypeException::fromVariable('lookBack', 'int', $lookBack);
         }
 
         $chain = $unSerialized['chain'] ?? null;
@@ -171,7 +171,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             throw TypeException::fromVariable('endsOfSentencesMap', 'array', $endsOfSentencesMap);
         }
 
-        $this->coherence = $coherence;
+        $this->lookBack = $lookBack;
         $this->chain = $chain;
         $this->frequencies = $frequencies;
         $this->startingWordSequences = $startingWordSequences;
@@ -207,7 +207,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             }
         }
 
-        if (!empty($frequencies) && $i === ($this->coherence - 1)) {
+        if (!empty($frequencies) && $i === ($this->lookBack - 1)) {
             return $frequencies;
         }
 
@@ -215,7 +215,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     }
 
     /**
-     * @inheritDoc
+     * (@inheritDoc)
      */
     public function isEndOfSentence(string $word): bool
     {
@@ -223,10 +223,10 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     }
 
     /**
-     * @inheritDoc
+     * (@inheritDoc)
      */
-    public function getCoherence(): int
+    public function getLookBack(): int
     {
-        return $this->coherence;
+        return $this->lookBack;
     }
 }

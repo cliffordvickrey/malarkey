@@ -11,10 +11,10 @@ interface ChainGeneratorInterface
     /**
      * Generates a Markov chain of word occurrences
      * @param string $text The source text
-     * @param int $coherence The number of words describing the state of each link in the chain. The higher the value,
-     * the more coherent the output text
+     * @param int $lookBack The number of words to look back when resolving the next sequence in the Markov chain. The
+     * higher the number, the more coherent will be the randomly-generated text
      * @param bool $ignoreLineBreaks Whether or not to ignore line breaks & treat the source text as a single paragraph
      * @return ChainInterface The generated chain
      */
-    public function generateChain(string $text, int $coherence = 2, bool $ignoreLineBreaks = false): ChainInterface;
+    public function generateChain(string $text, int $lookBack = 2, bool $ignoreLineBreaks = false): ChainInterface;
 }

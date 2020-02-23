@@ -54,7 +54,7 @@ EOT;
             /**
              * (@inheritDoc)
              */
-            public function getCoherence(): int
+            public function getLookBack(): int
             {
                 return 1;
             }

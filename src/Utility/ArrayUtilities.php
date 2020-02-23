@@ -46,7 +46,7 @@ class ArrayUtilities
     {
         $greatestCommonDivisor = $this->computeGreatestCommonDivisor($values);
 
-        if (!$greatestCommonDivisor) {
+        if ($greatestCommonDivisor < 2) {
             return $values;
         }
 

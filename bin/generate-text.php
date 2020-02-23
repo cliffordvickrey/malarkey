@@ -33,7 +33,8 @@ call_user_func(function (array $arguments): void {
                 '    -source [source]: The source filename containing text',
                 '    -sentences [sentences]: The number of sentences to generate',
                 '    -words [words]: Alternatively, the number of words to generate',
-                '    -coherence [coherence]: Coherence of the random text. Defaults to "2"',
+                '    -look-back [look-back]: Number of words in the chain to "look back" when resolving the next word'
+                . '. Defaults to "2"',
                 '',
                 'Switches:',
                 '    --ignore-line-breaks: Ignore line breaks in the source text',
@@ -44,7 +45,7 @@ call_user_func(function (array $arguments): void {
             $output = implode(PHP_EOL, $help);
         } else {
             $options = [
-                'coherence' => 2,
+                'look-back' => 2,
                 'ignore-line-breaks' => false,
                 'log-performance' => false,
                 'sentences' => null,
@@ -53,7 +54,7 @@ call_user_func(function (array $arguments): void {
 
             $filterArgument = function (string $name, string $value) {
                 switch ($name) {
-                    case 'coherence':
+                    case 'look-back':
                     case 'sentences':
                     case 'words':
                         $filtered = filter_var($value, FILTER_SANITIZE_NUMBER_INT);
@@ -92,7 +93,7 @@ call_user_func(function (array $arguments): void {
                 }
             };
 
-            $validArgumentNames = ['coherence', 'sentences', 'source', 'words'];
+            $validArgumentNames = ['look-back', 'sentences', 'source', 'words'];
             $validSwitchNames = ['ignore-line-breaks', 'log-performance'];
 
             /** @var string|null $argumentName */
@@ -171,7 +172,7 @@ call_user_func(function (array $arguments): void {
             $chainGenerator = new ChainGenerator();
             $textGenerator = new TextGenerator();
 
-            $chain = $chainGenerator->generateChain($text, $options['coherence'], $options['ignore-line-breaks']);
+            $chain = $chainGenerator->generateChain($text, $options['look-back'], $options['ignore-line-breaks']);
 
             if (null !== $startTime) {
                 $endTime = microtime(true);

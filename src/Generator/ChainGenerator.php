@@ -59,17 +59,22 @@ class ChainGenerator implements ChainGeneratorInterface
     /**
      * (@inheritDoc)
      */
-    public function generateChain(string $text, int $coherence = 2, bool $ignoreLineBreaks = false): ChainInterface
+    public function generateChain(string $text, int $lookBack = 2, bool $ignoreLineBreaks = false): ChainInterface
     {
-        if ($coherence < 1) {
-            throw new InvalidArgumentException('Coherence cannot be less than 1');
+        if ($lookBack < 1) {
+            throw new InvalidArgumentException('LookBack cannot be less than 1');
         }
 
+        // create a list of words from the source text
         $words = $this->extractWords($text, $ignoreLineBreaks);
+
+        // get information about every word. Are they starts to or ends of sentences?
         $dictionary = $this->getDictionary($words);
 
+        // for every possible state of the chain, determine the likelihoods of the next word in the sequence. Each hash
+        // represents a unique possible state of the chain
         $hashes = [];
-        $hashedFrequencies = self::getHashedFrequencies($words, $coherence, $hashes);
+        $hashedFrequencies = self::getHashedFrequencies($words, $lookBack, $hashes);
 
         $wordExtractor = function (string $word) use ($dictionary): Word {
             return $dictionary[$word];
@@ -77,10 +82,13 @@ class ChainGenerator implements ChainGeneratorInterface
 
         $links = [];
 
+        // encapsulate all the word and frequency data in Link objects
         foreach ($hashedFrequencies as $hash => $frequencies) {
             $links[] = new Link($frequencies, ...array_map($wordExtractor, $hashes[$hash]));
         }
 
+        // if ext-json wasn't built with the running PHP instance, return a Chain object that doesn't implement
+        // \JsonSerializable
         if (!$this->jsonSupport) {
             return new ChainWithoutJsonSupport($links);
         }
@@ -127,14 +135,19 @@ class ChainGenerator implements ChainGeneratorInterface
 
         foreach ($words as $i => $word) {
             if (!$i) {
+                // start of the chain: always a valid start of a sentence
                 $startOfSentence = true;
             } elseif ('' === $word || !$endOfSentence) {
+                // paragraph break or not the word immediately ending a sentence: not a start of a sentence
                 $startOfSentence = false;
             } elseif (isset($lowerCaseWordsMap[$word]) && !$lowerCaseWordsMap[$word]) {
+                // non-lowercase word after the end of a sentence: start of a sentence
                 $startOfSentence = true;
             } elseif (isset($lowerCaseWordsMap[$word]) && $lowerCaseWordsMap[$word]) {
+                // lowercase word after the end of a sentence: not start of a sentence
                 $startOfSentence = false;
             } else {
+                // determine whether the word is lowercase
                 $lowerCaseWordsMap[$word] = $this->lowerCaseResolver->isWordLowerCase($word);
                 $startOfSentence = !$lowerCaseWordsMap[$word];
             }
@@ -173,18 +186,19 @@ class ChainGenerator implements ChainGeneratorInterface
 
     /**
      * @param string[] $words
-     * @param int $coherence
+     * @param int $lookBack
      * @param array<string, array<int, string>> $hashes
      * @return array<string, array<string, int>>
      */
-    private static function getHashedFrequencies(array $words, int $coherence, array &$hashes): array
+    private static function getHashedFrequencies(array $words, int $lookBack, array &$hashes): array
     {
-        if (count($words) < $coherence) {
-            throw new InvalidArgumentException('Coherence cannot be greater than the number of words in the text');
+        if (count($words) < $lookBack) {
+            throw new InvalidArgumentException('LookBack cannot be greater than the number of words in the text');
         }
 
-        $wordsInLink = array_slice($words, 0, $coherence);
-        $words = array_merge(array_slice($words, $coherence), $wordsInLink);
+        // ensure that the end of the chain is linked to the beginning
+        $wordsInLink = array_slice($words, 0, $lookBack);
+        $words = array_merge(array_slice($words, $lookBack), $wordsInLink);
 
         $hash = serialize($wordsInLink);
         $frequencies = [];
