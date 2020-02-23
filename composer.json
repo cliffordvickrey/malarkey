@@ -1,0 +1,32 @@
+{
+    "name": "cliffordvickrey/malarkey",
+    "description": "Enterprise malarkey generator using a simple Markov chain algorithm",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Clifford Vickrey",
+            "email": "clifforddavidvickrey@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "phpstan/phpstan": "^0.12.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "CliffordVickrey\\Malarkey\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\CliffordVickrey\\Malarkey\\": "tests/src/"
+        }
+    },
+    "scripts": {
+        "analyze": "phpstan analyse bin src tests/src --level 7",
+        "test": "phpunit"
+    }
+}
