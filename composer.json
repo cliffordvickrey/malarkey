@@ -1,7 +1,11 @@
 {
     "name": "cliffordvickrey/malarkey",
-    "description": "Enterprise malarkey generator using a simple Markov chain algorithm",
+    "description": "Generates nonsensical but realistic-sounding text using a Markov chain algorithm",
     "type": "library",
+    "keywords": [
+        "Markov chain",
+        "text generator"
+    ],
     "authors": [
         {
             "name": "Clifford Vickrey",
