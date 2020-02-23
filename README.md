@@ -1,5 +1,8 @@
 # cliffordvickrey/malarkey
 
+[![Build Status](https://travis-ci.com/cliffordvickrey/dogs-playing-poker.svg?branch=master)](https://travis-ci.com/cliffordvickrey/malarkey/)
+[![Coverage Status](https://coveralls.io/repos/github/cliffordvickrey/malarkey/badge.svg)](https://coveralls.io/github/cliffordvickrey/malarkey)
+
 This package generates nonsensical but realistic-sounding text (malarkey!) using a simple Markov chain algorithm.
 
 In a Markov chain system, all possible states are determined by previous states. In the context of text, it models the transition from one state ("hello") to a future state ("world!") using a set of fixed probabilities.
