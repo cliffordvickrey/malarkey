@@ -476,4 +476,11 @@ JSON;
         $chain = $generate->generateChain('', 1);
         $this->assertTrue($chain->isEndOfSentence(''));
     }
+
+    public function testGenerateChainWithSentenceBeginningWithLowerCaseCharacter(): void
+    {
+        $generator = new ChainGenerator();
+        $chain = $generator->generateChain("Hark! the herald angels sing. the", 2, true);
+        $this->assertNotContains(['the', 'herald'], $chain->getStartingWordSequences());
+    }
 }

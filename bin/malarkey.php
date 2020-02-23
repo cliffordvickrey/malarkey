@@ -13,6 +13,7 @@ use CliffordVickrey\Malarkey\Generator\TextGenerator;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 call_user_func(function (array $arguments): void {
+    $arguments = array_values($arguments);
     $returnCode = 0;
     $output = '';
 
@@ -25,38 +26,50 @@ call_user_func(function (array $arguments): void {
             throw new RuntimeException('Failed to parse command line arguments');
         }
 
-        if (1 === count($arguments)) {
+        $command = $arguments[1] ?? null;
+
+        if (1 === count($arguments) || 'help' === $command) {
             $help = [
-                'Emits randomly-generated text from a source file using a Markov chain model',
+                'Markov chain command-line utilities',
+                'Usage: markov.php [generate-text|generate-chain]',
                 '',
-                'Arguments:',
-                '    -source [source]: The source filename containing text',
+                'generate-text',
+                'Emits randomly-generated text using a Markov chain algorithm.',
+                '    -source [source]: The source filename containing text. Use multiple -source arguments to '
+                . 'concatenate files',
                 '    -sentences [sentences]: The number of sentences to generate',
                 '    -words [words]: Alternatively, the number of words to generate',
-                '    -look-back [look-back]: Number of words in the chain to "look back" when resolving the next word'
-                . '. Defaults to "2"',
-                '',
-                'Switches:',
+                '    -lookback [lookback]: Number of words in the chain to "look back" when resolving the next word',
                 '    --ignore-line-breaks: Ignore line breaks in the source text',
                 '    --log-performance: Emit performance measures as well',
+                '    --unserialize: Treat the source file as a serialized Markov chain instead of raw text',
+                '',
+                'generate-chain',
+                'Emits a serialized Markov chain object.',
+                '    -source [source]: The source filename containing text. Use multiple -source arguments to '
+                . 'concatenate files',
+                '    -lookback [lookback]: Number of words in the chain to "look back" when resolving the next word',
+                '    --ignore-line-breaks: Ignore line breaks in the source text',
                 ''
             ];
 
             $output = implode(PHP_EOL, $help);
         } else {
-            $options = [
-                'look-back' => 2,
-                'ignore-line-breaks' => false,
-                'log-performance' => false,
-                'sentences' => null,
-                'words' => null
-            ];
+            $validCommands = ['generate-text', 'generate-chain'];
 
-            $filterArgument = function (string $name, string $value) {
+            if (!in_array($command, $validCommands)) {
+                throw new RuntimeException(sprintf('Invalid command, "%s"', $command));
+            }
+
+            $filterArgument = function (string $name, string $value, $initialValue) {
                 switch ($name) {
-                    case 'look-back':
+                    case 'lookback':
                     case 'sentences':
                     case 'words':
+                        if (null !== $initialValue) {
+                            throw new RuntimeException(sprintf('Duplicate arguments for "%s"', $name));
+                        }
+
                         $filtered = filter_var($value, FILTER_SANITIZE_NUMBER_INT);
 
                         if (false === $filtered) {
@@ -87,21 +100,43 @@ call_user_func(function (array $arguments): void {
                                 'Invalid value provided for option "%s"; expected non-empty value', $filtered
                             ));
                         }
-                        return $filtered;
+
+                        if (is_array($initialValue)) {
+                            return array_merge($initialValue, [$filtered]);
+                        }
+
+                        return [$filtered];
                     default:
                         throw new RuntimeException(sprintf('Unexpected option, "%s"', $name));
                 }
             };
 
-            $validArgumentNames = ['look-back', 'sentences', 'source', 'words'];
-            $validSwitchNames = ['ignore-line-breaks', 'log-performance'];
+            $generateText = 'generate-text' === $command;
+
+            $options = [
+                'ignore-line-breaks' => false,
+                'log-performance' => false,
+                'lookback' => null,
+                'sentences' => null,
+                'source' => null,
+                'unserialize' => null,
+                'words' => null
+            ];
+
+            if ($generateText) {
+                $validArgumentNames = ['lookback', 'sentences', 'source', 'words'];
+                $validSwitchNames = ['ignore-line-breaks', 'log-performance', 'unserialize'];
+            } else {
+                $validArgumentNames = ['lookback', 'source'];
+                $validSwitchNames = ['ignore-line-breaks'];
+            }
 
             /** @var string|null $argumentName */
             $argumentName = null;
             /** @var string[] $argumentValues */
             $argumentValues = [];
 
-            array_shift($arguments);
+            $arguments = array_slice($arguments, 2);
 
             $k = count($arguments) - 1;
 
@@ -115,7 +150,11 @@ call_user_func(function (array $arguments): void {
                 $isArgument = !$isSwitch && preg_match('/^-/', $argument);
 
                 if (($isArgument || $isSwitch) && null !== $argumentName && null !== $argumentValues) {
-                    $options[$argumentName] = $filterArgument($argumentName, implode(' ', $argumentValues));
+                    $options[$argumentName] = $filterArgument(
+                        $argumentName,
+                        implode(' ', $argumentValues),
+                        $options[$argumentName]
+                    );
                     $argumentName = null;
                     $argumentValues = [];
                 } elseif (($isArgument || $isSwitch) && null !== $argumentName && 0 === count($argumentValues)) {
@@ -129,6 +168,11 @@ call_user_func(function (array $arguments): void {
                     if (!in_array($switchName, $validSwitchNames)) {
                         throw new RuntimeException(sprintf('Invalid switch, "%s"', $switchName));
                     }
+
+                    if ($options[$switchName]) {
+                        throw new RuntimeException(sprintf('Duplicate switch, "%s"', $switchName));
+                    }
+
                     $options[$switchName] = true;
                 } elseif ($isArgument) {
                     $argumentName = (string)preg_replace('/^-/', '', $argument);
@@ -138,7 +182,11 @@ call_user_func(function (array $arguments): void {
                 } else {
                     $argumentValues[] = $argument;
                     if ($i === $k) {
-                        $options[$argumentName] = $filterArgument($argumentName, implode(' ', $argumentValues));
+                        $options[$argumentName] = $filterArgument(
+                            $argumentName,
+                            implode(' ', $argumentValues),
+                            $options[$argumentName]
+                        );
                     }
                 }
             }
@@ -151,17 +199,28 @@ call_user_func(function (array $arguments): void {
                 throw new RuntimeException('Required argument "source" missing');
             }
 
-            if (!isset($options['words']) && !isset($options['sentences'])) {
-                throw new RuntimeException('One of "words" and "sentences" must be passed as arguments');
+            if ($generateText) {
+                if (!isset($options['words']) && !isset($options['sentences'])) {
+                    throw new RuntimeException('One of "words" and "sentences" must be passed as arguments');
+                }
+
+                if (!isset($options['lookback'])) {
+                    $options['lookback'] = 2;
+                }
             }
 
-            if (!is_file($options['source'])) {
-                throw new RuntimeException(sprintf('File %s does not exist', $options['source']));
-            }
+            $text = '';
+            foreach ($options['source'] as $i => $fileName) {
+                if (!is_file($fileName)) {
+                    throw new RuntimeException(sprintf('File %s does not exist', $fileName));
+                }
 
-            $text = file_get_contents($options['source']);
-            if (false === $text) {
-                throw new RuntimeException(sprintf('Could not open %s for reading', $options['source']));
+
+                $fileContents = file_get_contents($fileName);
+                if (false === $fileContents) {
+                    throw new RuntimeException(sprintf('Could not open %s for reading', $fileName));
+                }
+                $text .= (($i && $generateText) ? "\n" : '') . $fileContents;
             }
 
             $startTime = null;
@@ -169,29 +228,40 @@ call_user_func(function (array $arguments): void {
                 $startTime = microtime(true);
             }
 
-            $chainGenerator = new ChainGenerator();
-            $textGenerator = new TextGenerator();
-
-            $chain = $chainGenerator->generateChain($text, $options['look-back'], $options['ignore-line-breaks']);
+            if (isset($options['unserialize']) && $options['unserialize']) {
+                $action = 'unserialized';
+                $chain = unserialize($text);
+            } else {
+                $action = 'generated';
+                $chainGenerator = new ChainGenerator();
+                $chain = $chainGenerator->generateChain($text, $options['lookback'], $options['ignore-line-breaks']);
+            }
 
             if (null !== $startTime) {
-                $endTime = microtime(true);
-                $output .= sprintf('Markov chain generated in %g seconds%s', $endTime - $startTime, PHP_EOL);
+                $elapsed = microtime(true) - $startTime;
+                $output .= sprintf('Markov chain %s in %g seconds%s', $action, $elapsed, PHP_EOL);
                 $startTime = microtime(true);
             }
 
-            $break = PHP_EOL . PHP_EOL;
-            $outputText = $textGenerator->generateText($chain, $options['sentences'], $options['words'], ' ', $break);
+            if ($generateText) {
+                $break = PHP_EOL . PHP_EOL;
+                $textGenerator = new TextGenerator();
+                $outputText = $textGenerator->generateText($chain, $options['sentences'], $options['words'], ' ', $break);
 
-            if (null !== $startTime) {
-                $endTime = microtime(true);
-                $wordCount = str_word_count($outputText);
+                if (null !== $startTime) {
+                    $elapsed = microtime(true) - $startTime;
+                    $peakMemoryUsage = memory_get_peak_usage() / 1024;
+                    $wordCount = str_word_count($outputText);
 
-                $output .= sprintf('%d words generated in %g seconds%s', $wordCount, $endTime - $startTime, PHP_EOL);
-                $output .= sprintf('Peak memory usage: %dKB%s%s', memory_get_peak_usage() / 1024, PHP_EOL, PHP_EOL);
+                    $output .= sprintf('%d words generated in %g seconds%s', $wordCount, $elapsed, PHP_EOL);
+                    $output .= sprintf('Peak memory usage: %dKB%s%s', $peakMemoryUsage, PHP_EOL, PHP_EOL);
+                }
+
+                $output .= $outputText;
+            } else {
+                $output = serialize($chain);
             }
 
-            $output .= $outputText;
         }
     } catch (Throwable $e) {
         $output = sprintf('Fatal error: %s', $e->getMessage());

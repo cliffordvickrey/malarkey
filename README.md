@@ -37,6 +37,12 @@ var_dump($output); // e.g. I'll by that for two dollars!
 
 ```
 
+Command line text generation utilities are also available. For help, run this in your project folder:
+
+```bash
+$ php vendor/bin/malarkey.php
+```
+
 ### ChainGenerator@generateChain
 Generates a Markov chain from source text.
 
@@ -70,4 +76,4 @@ Arguments:
 * `maxSentences` (int|null): The maximum number of sentences to generate (before $maxWords is reached), or NULL if unlimited
 * `maxWords` (int|null): The maximum number of words to generate, or NULL if unlimited
 * `wordSeparator` (string): String used to separate words in the output. Defaults to " "
-* `paragraphSeparator` (string): String used to paragraphs words in the output. Defaults to two newlines
+* `paragraphSeparator` (string): String used to separate paragraphs in the output. Defaults to two newlines

@@ -91,8 +91,6 @@ class TextGenerator implements TextGeneratorInterface
 
         /** @var array<string, bool> $endOfSentenceMemo */
         $endOfSentenceMemo = [];
-        /** @var array<string, array> $frequenciesMemo */
-        $frequenciesMemo = [];
         /** @var array<string, array> $wordDataMemo */
         $wordDataMemo = [];
 
@@ -100,16 +98,9 @@ class TextGenerator implements TextGeneratorInterface
 
         while (true) {
             // resolve the current state of the Markov chain from the cache
-            $frequencies = &$frequenciesMemo;
             $wordData = &$wordDataMemo;
 
             foreach ($wordsInLink as $wordInLink) {
-                if (!isset($frequencies[$wordInLink])) {
-                    $frequencies[$wordInLink] = [];
-                }
-
-                $frequencies = &$frequencies[$wordInLink];
-
                 if (!isset($wordData[$wordInLink])) {
                     $wordData[$wordInLink] = [];
                 }
@@ -117,14 +108,9 @@ class TextGenerator implements TextGeneratorInterface
                 $wordData = &$wordData[$wordInLink];
             }
 
-            // persist frequencies of the next possible sequence to the cache if they're not there already
-            if (empty($frequencies)) {
-                $frequencies = $chain->getStateFrequencies(...$wordsInLink);
-            }
-
             // persist analysis of the chain to the cache
             if (empty($wordData)) {
-                $wordData = $this->getWeightedWordListAndMax($frequencies);
+                $wordData = $this->getWeightedWordListAndMax($chain->getStateFrequencies(...$wordsInLink));
             }
 
             // use random number generator to determine the next sequence:
