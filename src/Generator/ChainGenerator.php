@@ -59,10 +59,10 @@ class ChainGenerator implements ChainGeneratorInterface
     /**
      * (@inheritDoc)
      */
-    public function generateChain(string $text, int $lookBack = 2, bool $ignoreLineBreaks = false): ChainInterface
+    public function generateChain(string $text, int $lookBehind = 2, bool $ignoreLineBreaks = false): ChainInterface
     {
-        if ($lookBack < 1) {
-            throw new InvalidArgumentException('LookBack cannot be less than 1');
+        if ($lookBehind < 1) {
+            throw new InvalidArgumentException('LookBehind cannot be less than 1');
         }
 
         // create a list of words from the source text
@@ -74,7 +74,7 @@ class ChainGenerator implements ChainGeneratorInterface
         // for every possible state of the chain, determine the likelihoods of the next word in the sequence. Each hash
         // represents a unique possible state of the chain
         $hashes = [];
-        $hashedFrequencies = self::getHashedFrequencies($words, $lookBack, $hashes);
+        $hashedFrequencies = self::getHashedFrequencies($words, $lookBehind, $hashes);
 
         $wordExtractor = function (string $word) use ($dictionary): Word {
             return $dictionary[$word];
@@ -186,19 +186,19 @@ class ChainGenerator implements ChainGeneratorInterface
 
     /**
      * @param string[] $words
-     * @param int $lookBack
+     * @param int $lookBehind
      * @param array<string, array<int, string>> $hashes
      * @return array<string, array<string, int>>
      */
-    private static function getHashedFrequencies(array $words, int $lookBack, array &$hashes): array
+    private static function getHashedFrequencies(array $words, int $lookBehind, array &$hashes): array
     {
-        if (count($words) < $lookBack) {
-            throw new InvalidArgumentException('LookBack cannot be greater than the number of words in the text');
+        if (count($words) < $lookBehind) {
+            throw new InvalidArgumentException('LookBehind cannot be greater than the number of words in the text');
         }
 
         // ensure that the end of the chain is linked to the beginning
-        $wordsInLink = array_slice($words, 0, $lookBack);
-        $words = array_merge(array_slice($words, $lookBack), $wordsInLink);
+        $wordsInLink = array_slice($words, 0, $lookBehind);
+        $words = array_merge(array_slice($words, $lookBehind), $wordsInLink);
 
         $hash = serialize($wordsInLink);
         $frequencies = [];

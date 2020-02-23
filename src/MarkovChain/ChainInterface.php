@@ -7,11 +7,11 @@ namespace CliffordVickrey\Malarkey\MarkovChain;
 interface ChainInterface
 {
     /**
-     * Returns the number of words to look back when resolving the next sequence in the Markov chain. The higher the
+     * Returns the number of words to look behind when resolving the next sequence in the Markov chain. The higher the
      * number, the more coherent will be the randomly-generated text
      * @return int
      */
-    public function getLookBack(): int;
+    public function getLookBehind(): int;
 
     /**
      * Returns the frequencies of the next word occurrences in the chain, by a given chain state.

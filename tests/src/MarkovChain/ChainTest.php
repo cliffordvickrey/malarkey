@@ -96,10 +96,10 @@ class ChainTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testSerializeBadLookBack(): void
+    public function testSerializeBadLookBehind(): void
     {
-        $this->nullProperty('lookBack');
-        $this->expectExceptionMessage('Variable lookBack has an unexpected type. Expected int; got NULL');
+        $this->nullProperty('lookBehind');
+        $this->expectExceptionMessage('Variable lookBehind has an unexpected type. Expected int; got NULL');
         unserialize(serialize($this->chain));
     }
 
@@ -159,9 +159,9 @@ class ChainTest extends TestCase
         unserialize(serialize($this->chain));
     }
 
-    public function testGetLookBack(): void
+    public function testGetLookBehind(): void
     {
-        $this->assertEquals(2, $this->chain->getLookBack());
+        $this->assertEquals(2, $this->chain->getLookBehind());
     }
 
     public function testGetStartingWordSequences(): void

@@ -41,7 +41,8 @@ call_user_func(function (array $arguments): void {
                 . 'concatenate files',
                 '    -sentences [sentences]: The number of sentences to generate',
                 '    -words [words]: Alternatively, the number of words to generate',
-                '    -lookback [lookback]: Number of words in the chain to "look back" when resolving the next word',
+                '    -lookbehind [lookbehind]: Number of words in the chain to "look behind" when resolving the next '
+                . 'word',
                 '    --ignore-line-breaks: Ignore line breaks in the source text',
                 '    --log-performance: Emit performance measures as well',
                 '    --unserialize: Treat the source file as a serialized Markov chain instead of raw text',
@@ -50,7 +51,8 @@ call_user_func(function (array $arguments): void {
                 'Emits a serialized Markov chain object.',
                 '    -source [source]: The source filename containing text. Use multiple -source arguments to '
                 . 'concatenate files',
-                '    -lookback [lookback]: Number of words in the chain to "look back" when resolving the next word',
+                '    -lookbehind [lookbehind]: Number of words in the chain to "look behind" when resolving the next '
+                . 'word',
                 '    --ignore-line-breaks: Ignore line breaks in the source text',
                 ''
             ];
@@ -65,7 +67,7 @@ call_user_func(function (array $arguments): void {
 
             $filterArgument = function (string $name, string $value, $initialValue) {
                 switch ($name) {
-                    case 'lookback':
+                    case 'lookbehind':
                     case 'sentences':
                     case 'words':
                         if (null !== $initialValue) {
@@ -118,7 +120,7 @@ call_user_func(function (array $arguments): void {
             $options = [
                 'ignore-line-breaks' => false,
                 'log-performance' => false,
-                'lookback' => null,
+                'lookbehind' => null,
                 'sentences' => null,
                 'source' => null,
                 'unserialize' => null,
@@ -126,10 +128,10 @@ call_user_func(function (array $arguments): void {
             ];
 
             if ($generateText) {
-                $validArgumentNames = ['lookback', 'sentences', 'source', 'words'];
+                $validArgumentNames = ['lookbehind', 'sentences', 'source', 'words'];
                 $validSwitchNames = ['ignore-line-breaks', 'log-performance', 'unserialize'];
             } else {
-                $validArgumentNames = ['lookback', 'source'];
+                $validArgumentNames = ['lookbehind', 'source'];
                 $validSwitchNames = ['ignore-line-breaks'];
             }
 
@@ -206,8 +208,8 @@ call_user_func(function (array $arguments): void {
                     throw new RuntimeException('One of "words" and "sentences" must be passed as arguments');
                 }
 
-                if (!isset($options['lookback'])) {
-                    $options['lookback'] = 2;
+                if (!isset($options['lookbehind'])) {
+                    $options['lookbehind'] = 2;
                 }
             }
 
@@ -236,7 +238,7 @@ call_user_func(function (array $arguments): void {
             } else {
                 $action = 'generated';
                 $chainGenerator = new ChainGenerator();
-                $chain = $chainGenerator->generateChain($text, $options['lookback'], $options['ignore-line-breaks']);
+                $chain = $chainGenerator->generateChain($text, $options['lookbehind'], $options['ignore-line-breaks']);
             }
 
             if (null !== $startTime) {

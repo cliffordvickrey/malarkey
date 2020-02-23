@@ -19,7 +19,7 @@ use function unserialize;
 abstract class ChainAbstract implements ChainInterface, Serializable
 {
     /** @var int */
-    private $lookBack = 0;
+    private $lookBehind = 0;
     /** @var array<int, array> */
     private $chain = [];
     /** @var array<string, array> */
@@ -41,7 +41,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             $this->bindLinkToChain($link, $dictionary);
         }
 
-        if ($this->lookBack < 1) {
+        if ($this->lookBehind < 1) {
             throw new InvalidArgumentException('Expected at least one link in the Markov chain');
         }
     }
@@ -60,11 +60,11 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             throw new InvalidArgumentException('Link must have at least one word');
         }
 
-        if (!$this->lookBack) {
-            $this->lookBack = $count;
-        } elseif ($count !== $this->lookBack) {
+        if (!$this->lookBehind) {
+            $this->lookBehind = $count;
+        } elseif ($count !== $this->lookBehind) {
             throw new InvalidArgumentException(
-                sprintf('Expected link to have %d word(s); got %d', $this->lookBack, $count)
+                sprintf('Expected link to have %d word(s); got %d', $this->lookBehind, $count)
             );
         }
 
@@ -122,7 +122,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     public function serialize()
     {
         return serialize([
-            'lookBack' => $this->lookBack,
+            'lookBehind' => $this->lookBehind,
             'chain' => $this->chain,
             'frequencies' => $this->frequencies,
             'startingWordSequences' => $this->startingWordSequences,
@@ -146,9 +146,9 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     {
         $unSerialized = unserialize($serialized);
 
-        $lookBack = $unSerialized['lookBack'] ?? null;
-        if (!is_int($lookBack)) {
-            throw TypeException::fromVariable('lookBack', 'int', $lookBack);
+        $lookBehind = $unSerialized['lookBehind'] ?? null;
+        if (!is_int($lookBehind)) {
+            throw TypeException::fromVariable('lookBehind', 'int', $lookBehind);
         }
 
         $chain = $unSerialized['chain'] ?? null;
@@ -171,7 +171,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             throw TypeException::fromVariable('endsOfSentencesMap', 'array', $endsOfSentencesMap);
         }
 
-        $this->lookBack = $lookBack;
+        $this->lookBehind = $lookBehind;
         $this->chain = $chain;
         $this->frequencies = $frequencies;
         $this->startingWordSequences = $startingWordSequences;
@@ -207,7 +207,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             }
         }
 
-        if (!empty($frequencies) && $i === ($this->lookBack - 1)) {
+        if (!empty($frequencies) && $i === ($this->lookBehind - 1)) {
             return $frequencies;
         }
 
@@ -225,8 +225,8 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     /**
      * (@inheritDoc)
      */
-    public function getLookBack(): int
+    public function getLookBehind(): int
     {
-        return $this->lookBack;
+        return $this->lookBehind;
     }
 }

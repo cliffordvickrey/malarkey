@@ -9,7 +9,7 @@ In a Markov chain system, all possible states are determined by previous states.
 
 A Markov chain generator takes text and, for all sequences of words, models the likelihoods of the next word in the sequence. ("world!" might have a 75% chance of following "Hello," and "Nurse!" might have a 25% chance). It is straightforward to visit the chain and, following these probabilities, emit gibberish that mimics human writing.
 
-For any given word, it is possible to "look back" any number of words to determine how likely the word is to be the next in the sequence. The more words the text generator looks back, the more realistic will be the output.
+For any given word, it is possible to "look behind" any number of words to determine how likely the word is to be the next in the sequence. The more words the text generator looks behind, the more realistic will be the output.
 
 ## Requirements
 
@@ -48,7 +48,7 @@ Generates a Markov chain from source text.
 
 Arguments:
 * `text` (string): The source text
-* `lookBack` (int): The number of words to look back when determining the next state of the Markov chain. The higher the number, the more coherent will be the randomly-generated text. Defaults to 2
+* `lookBehind` (int): The number of words to look behind when determining the next state of the Markov chain. The higher the number, the more coherent will be the randomly-generated text. Defaults to 2
 * `ignoreLineBreaks` (bool): Whether to skip over line breaks in the source text, such that no line breaks will appear in the generated output. Defaults to FALSE
 
 The returned chain object implements `Serializable` and `JsonSerializable` for persistence and portability purposes.

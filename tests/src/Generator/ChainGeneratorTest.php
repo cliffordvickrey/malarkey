@@ -435,17 +435,17 @@ JSON;
         $this->assertTrue($chain->isEndOfSentence('fox.'));
     }
 
-    public function testGenerateChainLookBackLessThanOne(): void
+    public function testGenerateChainLookBehindLessThanOne(): void
     {
         $generator = new ChainGenerator();
-        $this->expectExceptionMessage('LookBack cannot be less than 1');
+        $this->expectExceptionMessage('LookBehind cannot be less than 1');
         $generator->generateChain($this->text, 0);
     }
 
-    public function testGenerateChainLookBackGreaterThanWordCount(): void
+    public function testGenerateChainLookBehindGreaterThanWordCount(): void
     {
         $generator = new ChainGenerator();
-        $this->expectExceptionMessage('LookBack cannot be greater than the number of words in the text');
+        $this->expectExceptionMessage('LookBehind cannot be greater than the number of words in the text');
         $generator->generateChain($this->text, 41);
     }
 

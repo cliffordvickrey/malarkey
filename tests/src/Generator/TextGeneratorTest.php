@@ -54,7 +54,7 @@ EOT;
             /**
              * (@inheritDoc)
              */
-            public function getLookBack(): int
+            public function getLookBehind(): int
             {
                 return 1;
             }
