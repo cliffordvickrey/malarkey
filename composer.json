@@ -2,6 +2,7 @@
     "name": "cliffordvickrey/malarkey",
     "description": "Generates nonsensical but realistic-sounding text using a Markov chain algorithm",
     "type": "library",
+    "license": "MIT",
     "keywords": [
         "Markov chain",
         "text generator"
