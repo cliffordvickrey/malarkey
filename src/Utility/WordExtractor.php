@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace CliffordVickrey\Malarkey\Utility;
 
+use function array_map;
 use function array_merge;
+use function array_pop;
+use function array_reduce;
 use function explode;
+use function ltrim;
 use function preg_match;
 use function preg_replace;
 use function str_replace;
@@ -21,28 +25,19 @@ class WordExtractor implements WordExtractorInterface
         $whiteSpaceNormalized = str_replace(["\t", "\0", "\x0B"], ' ', $text);
         $whiteSpaceNormalized = preg_replace('/( *)[\n\r]+( *)/', "\n", $whiteSpaceNormalized);
         $whiteSpaceNormalized = preg_replace('/(\s)+/', '$1', $whiteSpaceNormalized);
-
-        $hasTrailingLineBreak = (bool)preg_match('/\n$/', $whiteSpaceNormalized);
-
         $whiteSpaceNormalized = trim($whiteSpaceNormalized);
 
         if ('' === $whiteSpaceNormalized) {
             return [];
         }
 
-        $paragraphs = explode("\n", $whiteSpaceNormalized);
+        $chunks = explode("\n", $whiteSpaceNormalized);
 
-        $words = [];
-        foreach ($paragraphs as $i => $paragraph) {
-            if ($i) {
-                $words[] = '';
-            }
-            $words = array_merge($words, explode(' ', $paragraph));
-        }
+        $words = array_reduce($chunks, function ($words, $chunk) {
+            return array_merge($words, explode(' ', $chunk), ['']);
+        }, []);
 
-        if ($hasTrailingLineBreak) {
-            $words[] = '';
-        }
+        array_pop($words);
 
         return $words;
     }

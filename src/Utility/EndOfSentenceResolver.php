@@ -11,6 +11,6 @@ class EndOfSentenceResolver implements EndOfSentenceResolverInterface
      */
     public function isEndOfSentence(string $word): bool
     {
-        return (bool)preg_match('/[.!?]([\'’"”»)]*)$/', $word);
+        return (bool)preg_match('/[.!?]([\'’"”»]*)$/', $word);
     }
 }

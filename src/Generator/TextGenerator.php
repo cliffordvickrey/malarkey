@@ -6,20 +6,25 @@ namespace CliffordVickrey\Malarkey\Generator;
 
 use CliffordVickrey\Malarkey\Exception\InvalidArgumentException;
 use CliffordVickrey\Malarkey\Exception\RuntimeException;
+use CliffordVickrey\Malarkey\Exception\TypeException;
 use CliffordVickrey\Malarkey\MarkovChain\ChainInterface;
 use CliffordVickrey\Malarkey\Utility\ArrayUtilities;
+use CliffordVickrey\Malarkey\Utility\EndOfSentenceResolver;
+use CliffordVickrey\Malarkey\Utility\EndOfSentenceResolverInterface;
 use function array_fill;
 use function array_keys;
 use function array_map;
+use function array_merge;
 use function array_shift;
 use function array_slice;
 use function array_sum;
-use function call_user_func_array;
 use function count;
 use function current;
 use function implode;
+use function is_array;
 use function key;
 use function mt_rand;
+use function sprintf;
 
 /**
  * Takes a Markov chain object to produce random text
@@ -28,28 +33,32 @@ class TextGenerator implements TextGeneratorInterface
 {
     /** @var ArrayUtilities */
     private $arrayUtilities;
+    /** @var EndOfSentenceResolverInterface */
+    private $endOfSentenceResolver;
 
-    public function __construct()
+    public function __construct(?EndOfSentenceResolverInterface $endOfSentenceResolver = null)
     {
         $this->arrayUtilities = new ArrayUtilities();
+        $this->endOfSentenceResolver = $endOfSentenceResolver ?? new EndOfSentenceResolver();
     }
 
     /**
      * (@inheritDoc)
      */
-    public function generateText(
-        ChainInterface $chain,
-        ?int $maxSentences,
-        ?int $maxWords = null,
-        string $wordSeparator = ' ',
-        string $paragraphSeparator = "\n\n"
-    ): string
+    public function generateText(ChainInterface $chain, $options = null): string
     {
-        // validate parameters:
+        // extract parameters
 
-        self::assertValidParameters($maxSentences, $maxWords);
+        $options = self::buildOptions($options);
+        list ($maxChunks, $maxWords, $maxSentences) = self::getMaximumChunksSentencesAndWords($options);
+        $chunkSeparator = $options->getChunkSeparator();
+        $wordSeparator = $options->getWordSeparator();
 
         // set up initial state:
+
+        if (0 === $maxChunks) {
+            return '';
+        }
 
         if (0 === $maxSentences) {
             return '';
@@ -61,27 +70,33 @@ class TextGenerator implements TextGeneratorInterface
 
         $words = self::getRandomStartingWords($chain);
 
-        $paragraphCount = 0;
+        /** @var array<string, bool> $endsOfSentencesMemo */
+        $endsOfSentencesMemo = [];
+
+        $chunkCount = 0;
         $sentenceCount = 0;
         $wordCount = 0;
 
         foreach ($words as $i => $word) {
             if ('' === $word) {
-                $paragraphCount++;
+                $chunkCount++;
             } else {
                 $wordCount++;
             }
 
-            if ($chain->isEndOfSentence($word)) {
-                $sentenceCount++;
+            if (null !== $maxSentences && !isset($endsOfSentencesMemo[$word])) {
+                $endsOfSentencesMemo[$word] = $this->endOfSentenceResolver->isEndOfSentence($word);
+                if ($endsOfSentencesMemo[$word]) {
+                    $sentenceCount++;
+                }
             }
 
-            if (null !== $maxWords && $maxWords <= $wordCount) {
-                return self::toText(array_slice($words, 0, $maxWords), $wordSeparator, $paragraphSeparator);
-            }
+            $invalid = (null !== $maxChunks && $maxChunks <= $chunkCount)
+                || (null !== $maxSentences && $maxSentences <= $sentenceCount)
+                || (null !== $maxWords && $maxWords <= $wordCount);
 
-            if (null !== $maxSentences && $maxSentences <= $sentenceCount) {
-                return self::toText(array_slice($words, 0, $i + 1), $wordSeparator, $paragraphSeparator);
+            if ($invalid) {
+                return self::toText(array_slice($words, 0, $i + 1), $chunkSeparator, $wordSeparator);
             }
         }
 
@@ -89,10 +104,9 @@ class TextGenerator implements TextGeneratorInterface
 
         // memoize function results for speed
 
-        /** @var array<string, bool> $endOfSentenceMemo */
-        $endOfSentenceMemo = [];
         /** @var array<string, array> $wordDataMemo */
         $wordDataMemo = [];
+        $isLineBreak = false;
 
         // the main loop
 
@@ -110,7 +124,7 @@ class TextGenerator implements TextGeneratorInterface
 
             // persist analysis of the chain to the cache
             if (empty($wordData)) {
-                $wordData = $this->getWeightedWordListAndMax($chain->getStateFrequencies(...$wordsInLink));
+                $wordData = $this->getWeightedWordListAndMax($chain->getFrequenciesBySequence(...$wordsInLink));
             }
 
             // use random number generator to determine the next sequence:
@@ -119,12 +133,14 @@ class TextGenerator implements TextGeneratorInterface
             array_shift($wordsInLink);
 
             // have we reached the sentence limit?
-            if (!isset($endOfSentenceMemo[$nextWord])) {
-                $endOfSentenceMemo[$nextWord] = $chain->isEndOfSentence((string)$nextWord);
-            }
+            if (null !== $maxSentences) {
+                if (!isset($endsOfSentencesMemo[$nextWord])) {
+                    $endsOfSentencesMemo[$nextWord] = $this->endOfSentenceResolver->isEndOfSentence($nextWord);
+                }
 
-            if ($endOfSentenceMemo[$nextWord]) {
-                $sentenceCount++;
+                if ($endsOfSentencesMemo[$nextWord]) {
+                    $sentenceCount++;
+                }
             }
 
             $words[] = $nextWord;
@@ -135,10 +151,25 @@ class TextGenerator implements TextGeneratorInterface
 
             $wordsInLink[] = (string)$nextWord;
 
-            if ('' === $nextWord) {
-                $paragraphCount++;
-            } else {
+            if (null === $maxChunks && null === $maxWords) {
+                continue;
+            }
+
+            if ($isLineBreak && '' === $nextWord) {
+                // two line breaks in a row: let's increment the word count to prevent an infinite loop
                 $wordCount++;
+            } else {
+                $isLineBreak = '' === $nextWord;
+                if ($isLineBreak) {
+                    $chunkCount++;
+                } else {
+                    $wordCount++;
+                }
+            }
+
+            // have we reached the chunk limit?
+            if ($maxChunks <= $chunkCount) {
+                break;
             }
 
             if (null === $maxWords) {
@@ -151,21 +182,50 @@ class TextGenerator implements TextGeneratorInterface
             }
 
             // if we're getting nothing but whitespace and the word count isn't incrementing, break as well
-            if ($paragraphCount > $maxWords) {
+            if ($chunkCount > $maxWords) {
                 break;
             }
         }
 
-        return self::toText($words, $wordSeparator, $paragraphSeparator);
+        return self::toText($words, $chunkSeparator, $wordSeparator);
     }
 
     /**
-     * Throw a logic exception if invalid max sentence or word values passed to generateText
-     * @param int|null $maxSentences
-     * @param int|null $maxWords
+     * @param mixed $options
+     * @return TextGeneratorOptionsInterface
      */
-    private static function assertValidParameters(?int $maxSentences, ?int $maxWords): void
+    private static function buildOptions($options): TextGeneratorOptionsInterface
     {
+        if ($options instanceof TextGeneratorOptionsInterface) {
+            return $options;
+        }
+
+        if (null === $options || is_array($options)) {
+            $options = is_array($options) ? TextGeneratorOptions::fromArray($options) : new TextGeneratorOptions();
+            return $options;
+        }
+
+        throw TypeException::fromVariable(
+            'options',
+            sprintf('array, NULL, or instance of %s', TextGeneratorOptionsInterface::class),
+            $options
+        );
+    }
+
+    /**
+     * @param TextGeneratorOptionsInterface $options
+     * @return array<int, int|null>
+     */
+    private static function getMaximumChunksSentencesAndWords(TextGeneratorOptionsInterface $options): array
+    {
+        $maxChunks = $options->getMaxChunks();
+        $maxSentences = $options->getMaxSentences();
+        $maxWords = $options->getMaxWords();
+
+        if (null !== $maxChunks && $maxChunks < 0) {
+            throw new InvalidArgumentException('Maximum chunks must be NULL or greater than -1');
+        }
+
         if (null !== $maxSentences && $maxSentences < 0) {
             throw new InvalidArgumentException('Maximum sentences must be NULL or greater than -1');
         }
@@ -174,9 +234,12 @@ class TextGenerator implements TextGeneratorInterface
             throw new InvalidArgumentException('Maximum words must be NULL or greater than -1');
         }
 
-        if (null === $maxSentences && null === $maxWords) {
-            throw new InvalidArgumentException('Maximum sentences and maximum words cannot both be NULL');
+        // if no arguments passed, set maximum chunks to 1 as a default
+        if (null === $maxChunks && null === $maxSentences && null === $maxWords) {
+            $maxChunks = 1;
         }
+
+        return [$maxChunks, $maxSentences, $maxWords];
     }
 
     /**
@@ -186,7 +249,7 @@ class TextGenerator implements TextGeneratorInterface
      */
     private static function getRandomStartingWords(ChainInterface $chain): array
     {
-        $elements = $chain->getStartingWordSequences();
+        $elements = $chain->getPossibleStartingSequences();
 
         if (0 === count($elements)) {
             throw new InvalidArgumentException('Cannot generate text; Markov chain has no starting point');
@@ -203,26 +266,26 @@ class TextGenerator implements TextGeneratorInterface
     /**
      * Concatenates the generated words to yield the output string
      * @param string[] $words Generated words
+     * @param string $chunkSeparator "Glue" for joining paragraphs
      * @param string $wordSeparator "Glue" for joining words in sentences
-     * @param string $paragraphSeparator "Glue" for joining paragraphs
      * @return string The final output
      */
-    private static function toText(array $words, string $wordSeparator, string $paragraphSeparator): string
+    private static function toText(array $words, string $chunkSeparator, string $wordSeparator): string
     {
         $inSentence = false;
         $sentenceCount = 0;
         $wordsBySentence = [];
 
         foreach ($words as $word) {
-            $isParagraphBreak = '' === $word;
+            $isLineBreak = '' === $word;
 
-            if ($isParagraphBreak && $inSentence) {
+            if ($isLineBreak && $inSentence) {
                 $sentenceCount++;
                 $inSentence = false;
-            } elseif (!$isParagraphBreak && isset($wordsBySentence[$sentenceCount])) {
+            } elseif (!$isLineBreak && isset($wordsBySentence[$sentenceCount])) {
                 $wordsBySentence[$sentenceCount][] = $word;
                 $inSentence = true;
-            } elseif (!$isParagraphBreak) {
+            } elseif (!$isLineBreak) {
                 $wordsBySentence[$sentenceCount] = [$word];
                 $inSentence = true;
             }
@@ -232,7 +295,7 @@ class TextGenerator implements TextGeneratorInterface
             return implode($wordSeparator, $wordsInSentence);
         }, $wordsBySentence);
 
-        return trim(implode($paragraphSeparator, $sentences));
+        return trim(implode($chunkSeparator, $sentences));
     }
 
     /**
@@ -260,7 +323,7 @@ class TextGenerator implements TextGeneratorInterface
 
         $frequencies = $this->arrayUtilities->divideValuesByGreatestCommonFactor($frequencies);
 
-        $weightedWordList = call_user_func_array('array_merge', array_map('array_fill',
+        $weightedWordList = array_merge(...array_map('array_fill',
             array_fill(0, $wordCount, 0),
             $frequencies,
             array_keys($frequencies)

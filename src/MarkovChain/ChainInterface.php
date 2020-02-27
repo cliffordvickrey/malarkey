@@ -14,22 +14,15 @@ interface ChainInterface
     public function getLookBehind(): int;
 
     /**
-     * Returns the frequencies of the next word occurrences in the chain, by a given chain state.
+     * Returns the frequencies of the next word occurrences in the chain, by a given chain state
      * @param string ...$words Words in the chain state
      * @return array<string, int> An array of words (keys) and frequencies (values)
      */
-    public function getStateFrequencies(string ...$words): array;
+    public function getFrequenciesBySequence(string ...$words): array;
 
     /**
      * Returns the possible starting states of the Markov chain
      * @return array<int, array<int, string>> A list of lists of words
      */
-    public function getStartingWordSequences(): array;
-
-    /**
-     * Returns whether or not a given word in the Markov chain can be an end of a sentence
-     * @param string $word
-     * @return bool
-     */
-    public function isEndOfSentence(string $word): bool;
+    public function getPossibleStartingSequences(): array;
 }

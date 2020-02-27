@@ -31,9 +31,9 @@ $chainGenerator = new CliffordVickrey\Malarkey\Generator\ChainGenerator();
 $markovChain = $chainGenerator->generateChain($text);
 
 $textGenerator = new CliffordVickrey\Malarkey\Generator\TextGenerator();
-$output = $textGenerator->generateText($markovChain, 1);
+$output = $textGenerator->generateText($markovChain);
 
-var_dump($output); // e.g. I'll by that for two dollars!
+var_dump($output); // e.g. I'll buy that for two dollars!
 
 ```
 
@@ -49,7 +49,6 @@ Generates a Markov chain from source text.
 Arguments:
 * `text` (string): The source text
 * `lookBehind` (int): The number of words to look behind when determining the next state of the Markov chain. The higher the number, the more coherent will be the randomly-generated text. Defaults to 2
-* `ignoreLineBreaks` (bool): Whether to skip over line breaks in the source text, such that no line breaks will appear in the generated output. Defaults to FALSE
 
 The returned chain object implements `Serializable` and `JsonSerializable` for persistence and portability purposes.
 
@@ -68,12 +67,18 @@ var_dump(json_encode($markovChain) === json_encode($unSerialized)); // TRUE
 
 ```
 
-### TextGenerator@generateText
+### TextGenerator
+
+#### TextGenerator@generateText
 Visits a Markov chain and returns randomly generated text.
 
 Arguments:
-* `chain` (ChainInterface): The object representation of a Markov Chain
-* `maxSentences` (int|null): The maximum number of sentences to generate (before $maxWords is reached), or NULL if unlimited
-* `maxWords` (int|null): The maximum number of words to generate, or NULL if unlimited
-* `wordSeparator` (string): String used to separate words in the output. Defaults to " "
-* `paragraphSeparator` (string): String used to separate paragraphs in the output. Defaults to two newlines
+* `chain` (`ChainInterface`): The object representation of a Markov Chain
+* `options` (mixed): Either an instance of `TextGeneratorOptionsInterface`, an associative array of options, or NULL for defaults.
+
+Valid options:
+* `chunkSeparator`: "Glue" to concatenate words chunks emitted by the text generator. Defaults to two newlines
+* `maxChunks`: Maximum number of chunks (paragraphs separated by line breaks) to generate. If no `maxChunks`, `maxSentences`, or `maxWords` provided, the generator will emit one chunk
+* `maxSentences`: Maximum number of sentences to generate. Defaults to NULL
+* `maxWords`: Maximum number of words to generator. Defaults to NULL
+* `wordSeparator`: "Glue" to concatenate words emitted by the text generator. Defaults to " """

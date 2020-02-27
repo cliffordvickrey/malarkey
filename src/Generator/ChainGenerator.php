@@ -6,35 +6,32 @@ namespace CliffordVickrey\Malarkey\Generator;
 
 use CliffordVickrey\Malarkey\Exception\InvalidArgumentException;
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
+use CliffordVickrey\Malarkey\MarkovChain\ChainAbstract;
+use CliffordVickrey\Malarkey\MarkovChain\ChainBuilder;
 use CliffordVickrey\Malarkey\MarkovChain\ChainInterface;
 use CliffordVickrey\Malarkey\MarkovChain\ChainWithoutJsonSupport;
-use CliffordVickrey\Malarkey\MarkovChain\Link;
-use CliffordVickrey\Malarkey\MarkovChain\Word;
-use CliffordVickrey\Malarkey\Utility\EndOfSentenceResolver;
-use CliffordVickrey\Malarkey\Utility\EndOfSentenceResolverInterface;
-use CliffordVickrey\Malarkey\Utility\LowerCaseResolver;
-use CliffordVickrey\Malarkey\Utility\LowerCaseResolverInterface;
 use CliffordVickrey\Malarkey\Utility\WordExtractor;
 use CliffordVickrey\Malarkey\Utility\WordExtractorInterface;
-use function array_filter;
-use function array_map;
 use function array_merge;
 use function array_shift;
 use function array_slice;
 use function array_values;
 use function count;
+use function current;
+use function end;
 use function interface_exists;
-use function serialize;
+use function reset;
+use function var_dump;
 
 /**
  * Markov chain generator. Takes text and builds a stochastic model describing the flow of the words therein.
  */
 class ChainGenerator implements ChainGeneratorInterface
 {
-    /** @var EndOfSentenceResolverInterface */
-    private $endOfSentenceResolver;
-    /** @var LowerCaseResolverInterface */
-    private $lowerCaseResolver;
+    /** @var int|null */
+    private $lastGenerateChunkCount;
+    /** @var int|null */
+    private $lastGeneratedWordCount;
     /** @var WordExtractorInterface */
     private $wordExtractor;
     /** @var bool */
@@ -42,184 +39,215 @@ class ChainGenerator implements ChainGeneratorInterface
 
     /**
      * ChainGenerator constructor.
-     * @param EndOfSentenceResolverInterface|null $endOfSentenceResolver
      * @param WordExtractorInterface|null $wordExtractor
      */
-    public function __construct(
-        ?EndOfSentenceResolverInterface $endOfSentenceResolver = null,
-        ?WordExtractorInterface $wordExtractor = null
-    )
+    public function __construct(?WordExtractorInterface $wordExtractor = null)
     {
-        $this->endOfSentenceResolver = $endOfSentenceResolver ?? new EndOfSentenceResolver();
-        $this->lowerCaseResolver = new LowerCaseResolver();
         $this->wordExtractor = $wordExtractor ?? new WordExtractor();
         $this->jsonSupport = interface_exists('JsonSerializable');
     }
 
     /**
+     * This is a very procedural implementation. What follows is not pretty, or particularly memory efficient, but
+     * fast!
      * (@inheritDoc)
      */
-    public function generateChain(string $text, int $lookBehind = 2, bool $ignoreLineBreaks = false): ChainInterface
+    public function generateChain(string $text, int $lookBehind = 2): ChainInterface
     {
         if ($lookBehind < 1) {
-            throw new InvalidArgumentException('LookBehind cannot be less than 1');
+            throw new InvalidArgumentException('Look behind cannot be less than 1');
         }
 
-        // create a list of words from the source text
-        $words = $this->extractWords($text, $ignoreLineBreaks);
+        $words = $this->extractWords($text);
 
-        // get information about every word. Are they starts to or ends of sentences?
-        $dictionary = $this->getDictionary($words);
-
-        // for every possible state of the chain, determine the likelihoods of the next word in the sequence. Each hash
-        // represents a unique possible state of the chain
-        $hashes = [];
-        $hashedFrequencies = self::getHashedFrequencies($words, $lookBehind, $hashes);
-
-        $wordExtractor = function (string $word) use ($dictionary): Word {
-            return $dictionary[$word];
-        };
-
-        $links = [];
-
-        // encapsulate all the word and frequency data in Link objects
-        foreach ($hashedFrequencies as $hash => $frequencies) {
-            $links[] = new Link($frequencies, ...array_map($wordExtractor, $hashes[$hash]));
+        // ensure that look behind isn't less than the word count
+        $wordAndLineBreakCount = count($words);
+        if ($wordAndLineBreakCount < $lookBehind) {
+            $lookBehind = $wordAndLineBreakCount;
         }
+
+        // ensure that the end of the chain is linked to the beginning
+        $words = array_merge($words, array_slice($words, 0, $lookBehind));
+
+        // frequencies: given state of chain X looking back Y words, what are the likely next words in the chain?
+        /** @var array<string, mixed> $frequenciesTree */
+        $frequenciesTree = [];
+        /** @var array<int, array> $frequenciesTable */
+        $frequenciesTable = [];
+
+        // store information about every discrete sequence of words
+        $maxSequenceId = -1;
+        /** @var array<string, mixed> $sequenceIds */
+        $sequenceIds = [];
+
+        // here, we memoize information about each word
+        $endOfChunk = false;
+        /** @var array<string, bool> $startsOfChunksMap */
+        $startsOfChunksMap = [];
+
+        // starting word sequences: what words can be used at the start of the chain?
+        /** @var array<int, array<int, string>> $startingSequences */
+        $startingSequences = [];
+
+        // statistics about the text we're working from
+        $chunkCount = 0;
+        $wordCount = 0;
+
+        // valid: whether or not to add to the frequencies table
+        $valid = false;
+
+        /** @var string[] $wordsInSequence */
+        $wordsInSequence = [];
+
+        foreach ($words as $i => $word) {
+            // convention: empty strings constitute the end of a chunk
+            $isNewLine = '' === $word;
+
+            // resolve whether the word is at the end of a chunk
+            if (!$i) {
+                $startOfChunk = true;
+            } elseif ($isNewLine || !$endOfChunk) {
+                $startOfChunk = false;
+            } else {
+                $startOfChunk = true;
+            }
+
+            if (!isset($startsOfChunksMap[$word])) {
+                // persist start of chunk value to the cache
+                $startsOfChunksMap[$word] = $startOfChunk;
+            }
+
+            $endOfChunk = $isNewLine;
+
+            if (!$valid) {
+                $valid = $lookBehind === count($wordsInSequence);
+            }
+
+            if ($valid) {
+                // use array references to build our frequencies struct
+                $frequenciesTreeRef = &$frequenciesTree;
+                $sequenceIdRef = &$sequenceIds;
+
+                foreach ($wordsInSequence as $wordInSequence) {
+                    if (!isset($sequenceIdRef[$wordInSequence])) {
+                        $frequenciesTreeRef[$wordInSequence] = [];
+                        $sequenceIdRef[$wordInSequence] = [];
+                    }
+
+                    $frequenciesTreeRef = &$frequenciesTreeRef[$wordInSequence];
+                    $sequenceIdRef = &$sequenceIdRef[$wordInSequence];
+                }
+
+                if (empty($frequenciesTreeRef)) {
+                    $frequenciesTreeRef = [$word => 1];
+                    $sequenceIdRef = $maxSequenceId++;
+                    $frequenciesTable[] = ['words' => $wordsInSequence];
+                } elseif (empty($frequenciesTreeRef[$word])) {
+                    $frequenciesTreeRef[$word] = 1;
+                } else {
+                    $frequenciesTreeRef[$word]++;
+                }
+
+                if ($startsOfChunksMap[$wordsInSequence[0]]) {
+                    $startingSequences[$sequenceIdRef] = $wordsInSequence;
+                }
+
+                $frequenciesTable[$sequenceIdRef]['frequencies'] = $frequenciesTreeRef;
+
+                // update statistics
+                if ($isNewLine) {
+                    $chunkCount++;
+                } else {
+                    $wordCount++;
+                }
+
+                // shift off the first word in the sequence
+                array_shift($wordsInSequence);
+            }
+
+            $wordsInSequence[] = $word;
+        }
+
+        // unlink references
+        unset($frequenciesTreeRef, $sequenceIdRef);
+
+        // remove sequence ID array keys from starting sequences
+        $startingSequences = array_values($startingSequences);
+
+        // save the metrics
+        $this->lastGenerateChunkCount = $chunkCount;
+        $this->lastGeneratedWordCount = $wordCount;
+
+        return $this->build($frequenciesTable, $frequenciesTree, $lookBehind, $startingSequences);
+    }
+
+    /**
+     * @param array<int, array> $frequenciesTable
+     * @param array<string, mixed> $frequenciesTree
+     * @param int $lookBehind
+     * @param array<int, array<int, string>> $startingSequences
+     * @return ChainAbstract
+     */
+    private function build(
+        array $frequenciesTable,
+        array $frequenciesTree,
+        int $lookBehind,
+        array $startingSequences
+    ): ChainAbstract
+    {
+        // build the chain
+        $chainBuilder = new ChainBuilder();
+        $chainBuilder->setFrequenciesTable($frequenciesTable);
+        $chainBuilder->setFrequenciesTree($frequenciesTree);
+        $chainBuilder->setLookBehind($lookBehind);
+        $chainBuilder->setPossibleStartingSequences($startingSequences);
 
         // if ext-json wasn't built with the running PHP instance, return a Chain object that doesn't implement
         // \JsonSerializable
         if (!$this->jsonSupport) {
-            return new ChainWithoutJsonSupport($links);
+            return ChainWithoutJsonSupport::build($chainBuilder);
         }
 
-        return new Chain($links);
+        return Chain::build($chainBuilder);
     }
 
     /**
      * @param string $text
-     * @param bool $ignoreLineBreaks
      * @return string[]
      */
-    private function extractWords(string $text, bool $ignoreLineBreaks): array
+    private function extractWords(string $text): array
     {
+        // create a list of words from the source text
         $words = $this->wordExtractor->extractWords($text);
 
+        // ensure there's at least one word!
         if (empty($words)) {
-            return [''];
+            $words = [' '];
         }
 
-        if ($ignoreLineBreaks) {
-            return array_values(array_filter($words, function (string $word): bool {
-                return '' !== $word;
-            }));
+        // ensure that the words list end with a line break
+        end($words);
+        if ('' !== current($words)) {
+            $words[] = '';
         }
+        reset($words);
 
         return $words;
     }
 
     /**
-     * @param string[] $words
-     * @return array<string, Word>
+     * @return int|null
      */
-    private function getDictionary(array $words): array
+    public function getLastGenerateChunkCount(): ?int
     {
-        $k = count($words) - 1;
-
-        $endOfSentence = false;
-
-        $lowerCaseWordsMap = [];
-        $startsOfSentencesMap = [];
-        $endOfSentencesMap = [];
-        $endsOfSentences = [];
-
-        foreach ($words as $i => $word) {
-            if (!$i) {
-                // start of the chain: always a valid start of a sentence
-                $startOfSentence = true;
-            } elseif ('' === $word || !$endOfSentence) {
-                // paragraph break or not the word immediately ending a sentence: not a start of a sentence
-                $startOfSentence = false;
-            } elseif (isset($lowerCaseWordsMap[$word]) && !$lowerCaseWordsMap[$word]) {
-                // non-lowercase word after the end of a sentence: start of a sentence
-                $startOfSentence = true;
-            } elseif (isset($lowerCaseWordsMap[$word]) && $lowerCaseWordsMap[$word]) {
-                // lowercase word after the end of a sentence: not start of a sentence
-                $startOfSentence = false;
-            } else {
-                // determine whether the word is lowercase
-                $lowerCaseWordsMap[$word] = $this->lowerCaseResolver->isWordLowerCase($word);
-                $startOfSentence = !$lowerCaseWordsMap[$word];
-            }
-
-            if (!isset($startsOfSentencesMap[$word]) || (!$startsOfSentencesMap[$word] && $startOfSentence)) {
-                $startsOfSentencesMap[$word] = $startOfSentence;
-            }
-
-            $endOfSentence = $endOfSentencesMap[$word] ?? null;
-
-            if (null === $endOfSentence) {
-                if ($i < $k || !empty($endsOfSentences)) {
-                    $endOfSentence = $this->endOfSentenceResolver->isEndOfSentence($word);
-                } else {
-                    // we've reached the end of the chain without finding an end of sentence marker. Let's mark the end
-                    // of the chain as an end of sentence
-                    $endOfSentence = true;
-                }
-
-                $endOfSentencesMap[$word] = $endOfSentence;
-
-                if ($endOfSentence) {
-                    $endsOfSentences[$word] = true;
-                }
-            }
-        }
-
-        $dictionary = [];
-
-        foreach ($startsOfSentencesMap as $word => $startOfSentence) {
-            $dictionary[$word] = new Word((string)$word, $startOfSentence, $endOfSentencesMap[$word]);
-        }
-
-        return $dictionary;
+        return $this->lastGenerateChunkCount;
     }
 
     /**
-     * @param string[] $words
-     * @param int $lookBehind
-     * @param array<string, array<int, string>> $hashes
-     * @return array<string, array<string, int>>
+     * @return int|null
      */
-    private static function getHashedFrequencies(array $words, int $lookBehind, array &$hashes): array
+    public function getLastGeneratedWordCount(): ?int
     {
-        if (count($words) < $lookBehind) {
-            throw new InvalidArgumentException('LookBehind cannot be greater than the number of words in the text');
-        }
-
-        // ensure that the end of the chain is linked to the beginning
-        $wordsInLink = array_slice($words, 0, $lookBehind);
-        $words = array_merge(array_slice($words, $lookBehind), $wordsInLink);
-
-        $hash = serialize($wordsInLink);
-        $frequencies = [];
-
-        foreach ($words as $word) {
-            if (!isset($frequencies[$hash])) {
-                $frequencies[$hash] = [];
-            }
-
-            if (!isset($frequencies[$hash][$word])) {
-                $frequencies[$hash][$word] = 1;
-            } else {
-                $frequencies[$hash][$word]++;
-            }
-
-            array_shift($wordsInLink);
-            $wordsInLink[] = $word;
-            $hash = serialize($wordsInLink);
-            $hashes[$hash] = $wordsInLink;
-        }
-
-        return $frequencies;
+        return $this->lastGeneratedWordCount;
     }
 }

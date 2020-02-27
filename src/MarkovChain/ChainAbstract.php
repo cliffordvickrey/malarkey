@@ -7,6 +7,7 @@ namespace CliffordVickrey\Malarkey\MarkovChain;
 use CliffordVickrey\Malarkey\Exception\InvalidArgumentException;
 use CliffordVickrey\Malarkey\Exception\OutOfBoundsException;
 use CliffordVickrey\Malarkey\Exception\TypeException;
+use Countable;
 use Serializable;
 use function count;
 use function implode;
@@ -16,44 +17,46 @@ use function serialize;
 use function sprintf;
 use function unserialize;
 
-abstract class ChainAbstract implements ChainInterface, Serializable
+abstract class ChainAbstract implements ChainInterface, Countable, Serializable
 {
+    /** @var array<string, array> */
+    private $frequenciesTree = [];
+    /** @var array<int, array> */
+    private $frequenciesTable = [];
     /** @var int */
     private $lookBehind = 0;
-    /** @var array<int, array> */
-    private $chain = [];
-    /** @var array<string, array> */
-    private $frequencies = [];
     /** @var array<int, array<int, string>> */
-    private $startingWordSequences = [];
-    /** @var array<string, bool> */
-    private $endsOfSentencesMap = [];
+    private $possibleStartingSequences = [];
 
     /**
-     * Chain constructor.
-     * @param LinkInterface[] $links
+     * ChainAbstract constructor.
      */
-    public function __construct(array $links)
+    final function __construct()
     {
-        $dictionary = [];
-
-        foreach ($links as $link) {
-            $this->bindLinkToChain($link, $dictionary);
-        }
-
-        if ($this->lookBehind < 1) {
-            throw new InvalidArgumentException('Expected at least one link in the Markov chain');
-        }
     }
 
     /**
-     * @param LinkInterface $link
-     * @param array<string, array<string, bool>> $dictionary
+     * @param ChainBuilder $builder
+     * @return ChainAbstract
      */
-    private function bindLinkToChain(LinkInterface $link, array &$dictionary): void
+    public static function build(ChainBuilder $builder): ChainAbstract
     {
-        $words = $link->getWords();
+        $builder->validate();
+        $static = new static();
+        $static->frequenciesTree = $builder->getFrequenciesTree();
+        $static->frequenciesTable = $builder->getFrequenciesTable();
+        $static->lookBehind = $builder->getLookBehind();
+        $static->possibleStartingSequences = $builder->getPossibleStartingSequences();
+        return $static;
+    }
 
+    /**
+     * @param string[] $words
+     * @param array<string, int> $frequencies
+     * @param bool|null $startOfSequence
+     */
+    public function add(array $words, array $frequencies, bool $startOfSequence = null): void
+    {
         $count = count($words);
 
         if (0 === $count) {
@@ -68,13 +71,11 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             );
         }
 
-        $frequencies = $link->getStateFrequencies();
-
         if (0 === count($frequencies)) {
             throw new InvalidArgumentException('Link frequencies cannot be empty');
         }
 
-        $ref = &$this->frequencies;
+        $ref = &$this->frequenciesTree;
         $wordValues = [];
 
         foreach ($words as $word) {
@@ -86,14 +87,6 @@ abstract class ChainAbstract implements ChainInterface, Serializable
 
             $ref = &$ref[$key];
 
-            if (!isset($dictionary[$key])) {
-                $dictionary[$key] = [$word->isStartOfSentence(), $word->isEndOfSentence()];
-
-                if ($dictionary[$key][1]) {
-                    $this->endsOfSentencesMap[$key] = true;
-                }
-            }
-
             $wordValues[] = $key;
         }
 
@@ -104,13 +97,11 @@ abstract class ChainAbstract implements ChainInterface, Serializable
             ));
         }
 
-        $ref = $link->getStateFrequencies();
-
-        if ($dictionary[$wordValues[0]][0]) {
-            $this->startingWordSequences[] = $wordValues;
+        if (true === $startOfSequence || (null === $startOfSequence && empty($this->possibleStartingSequences))) {
+            $this->possibleStartingSequences[] = $wordValues;
         }
 
-        $this->chain[] = [
+        $this->frequenciesTable[] = [
             'words' => $wordValues,
             'frequencies' => $frequencies
         ];
@@ -122,11 +113,10 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     public function serialize()
     {
         return serialize([
+            'frequenciesTable' => $this->frequenciesTable,
+            'frequenciesTree' => $this->frequenciesTree,
             'lookBehind' => $this->lookBehind,
-            'chain' => $this->chain,
-            'frequencies' => $this->frequencies,
-            'startingWordSequences' => $this->startingWordSequences,
-            'endsOfSentencesMap' => $this->endsOfSentencesMap
+            'possibleStartingSequences' => $this->possibleStartingSequences
         ]);
     }
 
@@ -135,7 +125,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
      */
     public function jsonSerialize()
     {
-        return $this->chain;
+        return $this->frequenciesTable;
     }
 
     /**
@@ -146,50 +136,44 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     {
         $unSerialized = unserialize($serialized);
 
+        $frequenciesTable = $unSerialized['frequenciesTable'] ?? null;
+        if (!is_array($frequenciesTable)) {
+            throw TypeException::fromVariable('frequenciesTable', 'array', $frequenciesTable);
+        }
+
+        $frequenciesTree = $unSerialized['frequenciesTree'] ?? null;
+        if (!is_array($frequenciesTree)) {
+            throw TypeException::fromVariable('frequenciesTree', 'array', $frequenciesTree);
+        }
+
         $lookBehind = $unSerialized['lookBehind'] ?? null;
         if (!is_int($lookBehind)) {
             throw TypeException::fromVariable('lookBehind', 'int', $lookBehind);
         }
 
-        $chain = $unSerialized['chain'] ?? null;
-        if (!is_array($chain)) {
-            throw TypeException::fromVariable('chain', 'array', $chain);
+        $possibleStartingSequences = $unSerialized['possibleStartingSequences'] ?? null;
+        if (!is_array($possibleStartingSequences)) {
+            throw TypeException::fromVariable('possibleStartingSequences', 'array', $possibleStartingSequences);
         }
 
-        $frequencies = $unSerialized['frequencies'] ?? null;
-        if (!is_array($frequencies)) {
-            throw TypeException::fromVariable('frequencies', 'array', $frequencies);
-        }
-
-        $startingWordSequences = $unSerialized['startingWordSequences'] ?? null;
-        if (!is_array($startingWordSequences)) {
-            throw TypeException::fromVariable('startingWordSequences', 'array', $startingWordSequences);
-        }
-
-        $endsOfSentencesMap = $unSerialized['endsOfSentencesMap'] ?? null;
-        if (!is_array($endsOfSentencesMap)) {
-            throw TypeException::fromVariable('endsOfSentencesMap', 'array', $endsOfSentencesMap);
-        }
-
+        $this->frequenciesTree = $frequenciesTree;
+        $this->frequenciesTable = $frequenciesTable;
         $this->lookBehind = $lookBehind;
-        $this->chain = $chain;
-        $this->frequencies = $frequencies;
-        $this->startingWordSequences = $startingWordSequences;
-        $this->endsOfSentencesMap = $endsOfSentencesMap;
+        $this->possibleStartingSequences = $possibleStartingSequences;
     }
 
     /**
      * (@inheritDoc)
      */
-    public function getStartingWordSequences(): array
+    public function getPossibleStartingSequences(): array
     {
-        return $this->startingWordSequences;
+        return $this->possibleStartingSequences;
     }
 
     /**
      * (@inheritDoc)
      */
-    public function getStateFrequencies(string ...$words): array
+    public function getFrequenciesBySequence(string ...$words): array
     {
         $frequencies = null;
         $i = 0;
@@ -200,7 +184,7 @@ abstract class ChainAbstract implements ChainInterface, Serializable
                 continue;
             }
 
-            $frequencies = $this->frequencies[$word] ?? null;
+            $frequencies = $this->frequenciesTree[$word] ?? null;
 
             if (!isset($frequencies)) {
                 break;
@@ -217,16 +201,16 @@ abstract class ChainAbstract implements ChainInterface, Serializable
     /**
      * (@inheritDoc)
      */
-    public function isEndOfSentence(string $word): bool
-    {
-        return isset($this->endsOfSentencesMap[$word]);
-    }
-
-    /**
-     * (@inheritDoc)
-     */
     public function getLookBehind(): int
     {
         return $this->lookBehind;
+    }
+
+    /**
+     * @return int
+     */
+    public function count()
+    {
+        return count($this->frequenciesTable);
     }
 }

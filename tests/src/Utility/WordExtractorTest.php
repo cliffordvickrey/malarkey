@@ -38,14 +38,4 @@ EOT;
         $extractor = new WordExtractor();
         $this->assertEquals([], $extractor->extractWords(''));
     }
-
-    public function testExtractWordsTrailingLineBreak(): void
-    {
-        $extractor = new WordExtractor();
-        $this->assertEquals(['Hello', 'world!', ''], $extractor->extractWords(<<< EOT
-Hello world!
-
-EOT
-));
-    }
 }
