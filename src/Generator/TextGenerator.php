@@ -158,6 +158,7 @@ class TextGenerator implements TextGeneratorInterface
             if ($isLineBreak && '' === $nextWord) {
                 // two line breaks in a row: let's increment the word count to prevent an infinite loop
                 $wordCount++;
+                $maxChunks++;
             } else {
                 $isLineBreak = '' === $nextWord;
                 if ($isLineBreak) {
@@ -167,7 +168,7 @@ class TextGenerator implements TextGeneratorInterface
                 }
             }
 
-            // have we reached the chunk limit?
+            // chunk limit exceeded
             if ($maxChunks <= $chunkCount) {
                 break;
             }
@@ -178,11 +179,6 @@ class TextGenerator implements TextGeneratorInterface
 
             // word count exceeded:
             if ($maxWords <= $wordCount) {
-                break;
-            }
-
-            // if we're getting nothing but whitespace and the word count isn't incrementing, break as well
-            if ($chunkCount > $maxWords) {
                 break;
             }
         }

@@ -53,9 +53,9 @@ abstract class ChainAbstract implements ChainInterface, Countable, Serializable
     /**
      * @param string[] $words
      * @param array<string, int> $frequencies
-     * @param bool|null $startOfSequence
+     * @param bool|null $startingSequence
      */
-    public function add(array $words, array $frequencies, bool $startOfSequence = null): void
+    public function add(array $words, array $frequencies, bool $startingSequence = null): void
     {
         $count = count($words);
 
@@ -97,13 +97,14 @@ abstract class ChainAbstract implements ChainInterface, Countable, Serializable
             ));
         }
 
-        if (true === $startOfSequence || (null === $startOfSequence && empty($this->possibleStartingSequences))) {
+        if (true === $startingSequence || (null === $startingSequence && empty($this->possibleStartingSequences))) {
             $this->possibleStartingSequences[] = $wordValues;
         }
 
         $this->frequenciesTable[] = [
             'words' => $wordValues,
-            'frequencies' => $frequencies
+            'frequencies' => $frequencies,
+            'startingSequence' => $startingSequence
         ];
     }
 

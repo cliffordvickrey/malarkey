@@ -96,7 +96,7 @@ call_user_func(function (array $arguments): void {
                             ));
                         }
 
-                        if ('level' === $name && $filtered < 1) {
+                        if ('lookback' === $name && $filtered < 1) {
                             throw new InvalidArgumentException(sprintf(
                                 'Invalid value provided for option "%s"; expected integer greater than 0', $filtered
                             ));
@@ -263,7 +263,7 @@ call_user_func(function (array $arguments): void {
                     $output .= sprintf(
                         'Source text has %d words and %d paragraphs%s',
                         $chainGenerator->getLastGeneratedWordCount(),
-                        $chainGenerator->getLastGenerateChunkCount(),
+                        $chainGenerator->getLastGeneratedChunkCount(),
                         PHP_EOL
                     );
                 }

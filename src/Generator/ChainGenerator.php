@@ -28,7 +28,7 @@ use function reset;
 class ChainGenerator implements ChainGeneratorInterface
 {
     /** @var int|null */
-    private $lastGenerateChunkCount;
+    private $lastGeneratedChunkCount;
     /** @var int|null */
     private $lastGeneratedWordCount;
     /** @var WordExtractorInterface */
@@ -48,7 +48,7 @@ class ChainGenerator implements ChainGeneratorInterface
 
     /**
      * This is a very procedural implementation. What follows is not pretty, or particularly memory efficient, but
-     * fast!
+     * rather fast!
      * (@inheritDoc)
      */
     public function generateChain(string $text, int $lookBehind = 2): ChainInterface
@@ -59,7 +59,7 @@ class ChainGenerator implements ChainGeneratorInterface
 
         $words = $this->extractWords($text);
 
-        // ensure that look behind isn't less than the word count
+        // ensure that look behind isn't greater than the word count
         $wordAndLineBreakCount = count($words);
         if ($wordAndLineBreakCount < $lookBehind) {
             $lookBehind = $wordAndLineBreakCount;
@@ -140,18 +140,23 @@ class ChainGenerator implements ChainGeneratorInterface
                 if (empty($frequenciesTreeRef)) {
                     $frequenciesTreeRef = [$word => 1];
                     $sequenceIdRef = $maxSequenceId++;
-                    $frequenciesTable[] = ['words' => $wordsInSequence];
+                    $frequenciesTable[] = [
+                        'words' => $wordsInSequence,
+                        'frequencies' => 0,
+                        'startingSequence' => false
+                    ];
                 } elseif (empty($frequenciesTreeRef[$word])) {
                     $frequenciesTreeRef[$word] = 1;
                 } else {
                     $frequenciesTreeRef[$word]++;
                 }
 
+                $frequenciesTable[$sequenceIdRef]['frequencies'] = $frequenciesTreeRef;
+
                 if ($startsOfChunksMap[$wordsInSequence[0]]) {
                     $startingSequences[$sequenceIdRef] = $wordsInSequence;
+                    $frequenciesTable[$sequenceIdRef]['staringSequence'] = true;
                 }
-
-                $frequenciesTable[$sequenceIdRef]['frequencies'] = $frequenciesTreeRef;
 
                 // update statistics
                 if ($isNewLine) {
@@ -174,7 +179,7 @@ class ChainGenerator implements ChainGeneratorInterface
         $startingSequences = array_values($startingSequences);
 
         // save the metrics
-        $this->lastGenerateChunkCount = $chunkCount;
+        $this->lastGeneratedChunkCount = $chunkCount;
         $this->lastGeneratedWordCount = $wordCount;
 
         return $this->build($frequenciesTable, $frequenciesTree, $lookBehind, $startingSequences);
@@ -237,9 +242,9 @@ class ChainGenerator implements ChainGeneratorInterface
     /**
      * @return int|null
      */
-    public function getLastGenerateChunkCount(): ?int
+    public function getLastGeneratedChunkCount(): ?int
     {
-        return $this->lastGenerateChunkCount;
+        return $this->lastGeneratedChunkCount;
     }
 
     /**
