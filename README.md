@@ -81,4 +81,5 @@ Valid options:
 * `maxChunks`: Maximum number of chunks (paragraphs separated by line breaks) to generate. If no `maxChunks`, `maxSentences`, or `maxWords` provided, the generator will emit one chunk
 * `maxSentences`: Maximum number of sentences to generate. Defaults to NULL
 * `maxWords`: Maximum number of words to generator. Defaults to NULL
-* `wordSeparator`: "Glue" to concatenate words emitted by the text generator. Defaults to " """
+* `wordSeparator`: "Glue" to concatenate words emitted by the text generator. Defaults to " "
+
