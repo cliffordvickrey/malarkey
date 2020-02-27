@@ -21,7 +21,6 @@ use function current;
 use function end;
 use function interface_exists;
 use function reset;
-use function var_dump;
 
 /**
  * Markov chain generator. Takes text and builds a stochastic model describing the flow of the words therein.
@@ -182,6 +181,30 @@ class ChainGenerator implements ChainGeneratorInterface
     }
 
     /**
+     * @param string $text
+     * @return string[]
+     */
+    private function extractWords(string $text): array
+    {
+        // create a list of words from the source text
+        $words = $this->wordExtractor->extractWords($text);
+
+        // ensure there's at least one word!
+        if (empty($words)) {
+            $words = [' '];
+        }
+
+        // ensure that the words list end with a line break
+        end($words);
+        if ('' !== current($words)) {
+            $words[] = '';
+        }
+        reset($words);
+
+        return $words;
+    }
+
+    /**
      * @param array<int, array> $frequenciesTable
      * @param array<string, mixed> $frequenciesTree
      * @param int $lookBehind
@@ -209,30 +232,6 @@ class ChainGenerator implements ChainGeneratorInterface
         }
 
         return Chain::build($chainBuilder);
-    }
-
-    /**
-     * @param string $text
-     * @return string[]
-     */
-    private function extractWords(string $text): array
-    {
-        // create a list of words from the source text
-        $words = $this->wordExtractor->extractWords($text);
-
-        // ensure there's at least one word!
-        if (empty($words)) {
-            $words = [' '];
-        }
-
-        // ensure that the words list end with a line break
-        end($words);
-        if ('' !== current($words)) {
-            $words[] = '';
-        }
-        reset($words);
-
-        return $words;
     }
 
     /**
