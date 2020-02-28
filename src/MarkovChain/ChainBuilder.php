@@ -13,13 +13,13 @@ use function sprintf;
 final class ChainBuilder
 {
     /** @var array<int, array> */
-    private $frequenciesTable = [];
+    private $frequenciesTable;
     /** @var array<string, array> */
-    private $frequenciesTree = [];
+    private $frequenciesTree;
     /** @var int */
-    private $lookBehind = 0;
+    private $lookBehind;
     /** @var array<int, array<int, string>> */
-    private $possibleStartingSequences = [];
+    private $possibleStartingSequences;
 
     /**
      * @return array<int, array>
@@ -89,9 +89,11 @@ final class ChainBuilder
     {
         $nullProperties = array_filter(get_object_vars($this), 'is_null');
         if (!empty($nullProperties)) {
-            throw new RuntimeException(
-                sprintf('%s is invalid; properties %s are NULL', static::class, implode(', ', $nullProperties))
-            );
+            throw new RuntimeException(sprintf(
+                '%s is invalid; properties %s are NULL',
+                static::class,
+                implode(', ', array_keys($nullProperties))
+            ));
         }
     }
 }

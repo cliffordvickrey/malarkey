@@ -60,19 +60,19 @@ abstract class ChainAbstract implements ChainInterface, Countable, Serializable
         $count = count($words);
 
         if (0 === $count) {
-            throw new InvalidArgumentException('Link must have at least one word');
+            throw new InvalidArgumentException('Sequence must have at least one word');
         }
 
         if (!$this->lookBehind) {
             $this->lookBehind = $count;
         } elseif ($count !== $this->lookBehind) {
             throw new InvalidArgumentException(
-                sprintf('Expected link to have %d word(s); got %d', $this->lookBehind, $count)
+                sprintf('Expected sequence to have %d word(s); got %d', $this->lookBehind, $count)
             );
         }
 
         if (0 === count($frequencies)) {
-            throw new InvalidArgumentException('Link frequencies cannot be empty');
+            throw new InvalidArgumentException('Sequence frequencies cannot be empty');
         }
 
         $ref = &$this->frequenciesTree;
@@ -92,14 +92,20 @@ abstract class ChainAbstract implements ChainInterface, Countable, Serializable
 
         if (!empty($ref)) {
             throw new InvalidArgumentException(sprintf(
-                'Link with word values "%s" is not unique to the chain',
+                'Sequence with word values "%s" is not unique to the chain',
                 implode(', ', $words)
             ));
         }
 
-        if (true === $startingSequence || (null === $startingSequence && empty($this->possibleStartingSequences))) {
+        if (null === $startingSequence && empty($this->possibleStartingSequences)) {
+            $startingSequence = true;
+        }
+
+        if ($startingSequence) {
             $this->possibleStartingSequences[] = $wordValues;
         }
+
+        $ref = $frequencies;
 
         $this->frequenciesTable[] = [
             'words' => $wordValues,

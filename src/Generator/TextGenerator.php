@@ -16,7 +16,6 @@ use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_shift;
-use function array_slice;
 use function array_sum;
 use function count;
 use function current;
@@ -24,6 +23,8 @@ use function implode;
 use function is_array;
 use function key;
 use function mt_rand;
+use function next;
+use function reset;
 use function sprintf;
 
 /**
@@ -50,25 +51,17 @@ class TextGenerator implements TextGeneratorInterface
         // extract parameters
 
         $options = self::buildOptions($options);
-        list ($maxChunks, $maxWords, $maxSentences) = self::getMaximumChunksSentencesAndWords($options);
+        list ($maxChunks, $maxSentences, $maxWords) = self::getMaximumChunksSentencesAndWords($options);
         $chunkSeparator = $options->getChunkSeparator();
         $wordSeparator = $options->getWordSeparator();
 
         // set up initial state:
 
-        if (0 === $maxChunks) {
+        if (0 === $maxChunks || 0 === $maxSentences || 0 === $maxWords) {
             return '';
         }
 
-        if (0 === $maxSentences) {
-            return '';
-        }
-
-        if (0 === $maxWords) {
-            return '';
-        }
-
-        $words = self::getRandomStartingWords($chain);
+        $wordsInSequence = self::getRandomStartingWords($chain);
 
         /** @var array<string, bool> $endsOfSentencesMemo */
         $endsOfSentencesMemo = [];
@@ -77,31 +70,6 @@ class TextGenerator implements TextGeneratorInterface
         $sentenceCount = 0;
         $wordCount = 0;
 
-        foreach ($words as $i => $word) {
-            if ('' === $word) {
-                $chunkCount++;
-            } else {
-                $wordCount++;
-            }
-
-            if (null !== $maxSentences && !isset($endsOfSentencesMemo[$word])) {
-                $endsOfSentencesMemo[$word] = $this->endOfSentenceResolver->isEndOfSentence($word);
-                if ($endsOfSentencesMemo[$word]) {
-                    $sentenceCount++;
-                }
-            }
-
-            $invalid = (null !== $maxChunks && $maxChunks <= $chunkCount)
-                || (null !== $maxSentences && $maxSentences <= $sentenceCount)
-                || (null !== $maxWords && $maxWords <= $wordCount);
-
-            if ($invalid) {
-                return self::toText(array_slice($words, 0, $i + 1), $chunkSeparator, $wordSeparator);
-            }
-        }
-
-        $wordsInLink = $words;
-
         // memoize function results for speed
 
         /** @var array<string, array> $wordDataMemo */
@@ -109,28 +77,46 @@ class TextGenerator implements TextGeneratorInterface
         $isLineBreak = false;
 
         // the main loop
+        $valid = false;
+        $words = [];
 
         while (true) {
-            // resolve the current state of the Markov chain from the cache
-            $wordData = &$wordDataMemo;
+            if ($valid) {
+                // if we're here, we need to randomly add to the word list. To do so, first resolve the current state
+                // of the Markov chain from the cache
+                $wordData = &$wordDataMemo;
 
-            foreach ($wordsInLink as $wordInLink) {
-                if (!isset($wordData[$wordInLink])) {
-                    $wordData[$wordInLink] = [];
+                foreach ($wordsInSequence as $wordInSequence) {
+                    if (!isset($wordData[$wordInSequence])) {
+                        $wordData[$wordInSequence] = [];
+                    }
+
+                    $wordData = &$wordData[$wordInSequence];
                 }
 
-                $wordData = &$wordData[$wordInLink];
+                // persist analysis of the chain to the cache
+                if (empty($wordData)) {
+                    $wordData = $this->getWeightedWordListAndMax($chain->getFrequenciesBySequence(...$wordsInSequence));
+                }
+
+                // use random number generator to determine the next sequence:
+                $nextWord = (string)($wordData[1] ? $wordData[0][mt_rand(0, $wordData[1])] : $wordData[0][0]);
+
+                // shift the first word off the sequence
+                array_shift($wordsInSequence);
+                $wordsInSequence[] = $nextWord;
+            } else {
+                // we haven't reached the end of the first sequence in the chain yet
+                $nextWord = current($wordsInSequence);
+                next($wordsInSequence);
+                $valid = false === current($wordsInSequence);
+
+                if ($valid) {
+                    reset($wordsInSequence);
+                }
             }
 
-            // persist analysis of the chain to the cache
-            if (empty($wordData)) {
-                $wordData = $this->getWeightedWordListAndMax($chain->getFrequenciesBySequence(...$wordsInLink));
-            }
-
-            // use random number generator to determine the next sequence:
-            $nextWord = $wordData[1] ? $wordData[0][mt_rand(0, $wordData[1])] : $wordData[0][0];
-
-            array_shift($wordsInLink);
+            $words[] = $nextWord;
 
             // have we reached the sentence limit?
             if (null !== $maxSentences) {
@@ -141,15 +127,11 @@ class TextGenerator implements TextGeneratorInterface
                 if ($endsOfSentencesMemo[$nextWord]) {
                     $sentenceCount++;
                 }
+
+                if ($maxSentences <= $sentenceCount) {
+                    break;
+                }
             }
-
-            $words[] = $nextWord;
-
-            if (null !== $maxSentences && $maxSentences <= $sentenceCount) {
-                break;
-            }
-
-            $wordsInLink[] = (string)$nextWord;
 
             if (null === $maxChunks && null === $maxWords) {
                 continue;
@@ -169,16 +151,12 @@ class TextGenerator implements TextGeneratorInterface
             }
 
             // chunk limit exceeded
-            if ($maxChunks <= $chunkCount) {
+            if (null !== $maxChunks && $maxChunks <= $chunkCount) {
                 break;
             }
 
-            if (null === $maxWords) {
-                continue;
-            }
-
-            // word count exceeded:
-            if ($maxWords <= $wordCount) {
+            // word count exceeded
+            if (null !== $maxWords && $maxWords <= $wordCount) {
                 break;
             }
         }
@@ -260,6 +238,40 @@ class TextGenerator implements TextGeneratorInterface
     }
 
     /**
+     * Analyzes word frequencies of a Markov Chain sequences and yields an array from which to select a random element
+     * @param array<string, int> $frequencies Frequencies of the next possible state in the chain
+     * @return array<int, array|int> An array that looks like [["state1", "state1", "state2"], 2], where 2 is the count
+     * of possible states minus one
+     */
+    private function getWeightedWordListAndMax(array $frequencies): array
+    {
+        if (1 === count($frequencies) && current($frequencies) > 0) {
+            return [[key($frequencies)], 0];
+        }
+
+        $frequencies = $this->arrayUtilities->filterOutIntegersLessThanOne($frequencies);
+
+        $wordCount = count($frequencies);
+        if (0 === $wordCount) {
+            throw new RuntimeException('Cannot generate text; cannot find the next word in the chain');
+        }
+
+        if (array_sum($frequencies) === $wordCount) {
+            return [array_keys($frequencies), $wordCount - 1];
+        }
+
+        $frequencies = $this->arrayUtilities->divideValuesByGreatestCommonFactor($frequencies);
+
+        $weightedWordList = array_merge(...array_map('array_fill',
+            array_fill(0, $wordCount, 0),
+            $frequencies,
+            array_keys($frequencies)
+        ));
+
+        return [$weightedWordList, count($weightedWordList) - 1];
+    }
+
+    /**
      * Concatenates the generated words to yield the output string
      * @param string[] $words Generated words
      * @param string $chunkSeparator "Glue" for joining paragraphs
@@ -292,39 +304,5 @@ class TextGenerator implements TextGeneratorInterface
         }, $wordsBySentence);
 
         return trim(implode($chunkSeparator, $sentences));
-    }
-
-    /**
-     * Analyzes word frequencies of a Markov Chain sequences and yields an array from which to select a random element
-     * @param array<string, int> $frequencies Frequencies of the next possible state in the chain
-     * @return array<int, array|int> An array that looks like [["state1", "state1", "state2"], 2], where 2 is the count
-     * of possible states minus one
-     */
-    private function getWeightedWordListAndMax(array $frequencies): array
-    {
-        if (1 === count($frequencies) && current($frequencies) > 0) {
-            return [[key($frequencies)], 0];
-        }
-
-        $frequencies = $this->arrayUtilities->filterOutIntegersLessThanOne($frequencies);
-
-        $wordCount = count($frequencies);
-        if (0 === $wordCount) {
-            throw new RuntimeException('Cannot generate text; cannot find the next word in the chain');
-        }
-
-        if (array_sum($frequencies) === $wordCount) {
-            return [array_keys($frequencies), $wordCount - 1];
-        }
-
-        $frequencies = $this->arrayUtilities->divideValuesByGreatestCommonFactor($frequencies);
-
-        $weightedWordList = array_merge(...array_map('array_fill',
-            array_fill(0, $wordCount, 0),
-            $frequencies,
-            array_keys($frequencies)
-        ));
-
-        return [$weightedWordList, count($weightedWordList) - 1];
     }
 }

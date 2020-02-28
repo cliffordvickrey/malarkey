@@ -139,7 +139,7 @@ class ChainGenerator implements ChainGeneratorInterface
 
                 if (empty($frequenciesTreeRef)) {
                     $frequenciesTreeRef = [$word => 1];
-                    $sequenceIdRef = $maxSequenceId++;
+                    $sequenceIdRef = ++$maxSequenceId;
                     $frequenciesTable[] = [
                         'words' => $wordsInSequence,
                         'frequencies' => 0,
@@ -151,11 +151,12 @@ class ChainGenerator implements ChainGeneratorInterface
                     $frequenciesTreeRef[$word]++;
                 }
 
+                $sequenceIdRef = (int)$sequenceIdRef;
                 $frequenciesTable[$sequenceIdRef]['frequencies'] = $frequenciesTreeRef;
 
                 if ($startsOfChunksMap[$wordsInSequence[0]]) {
                     $startingSequences[$sequenceIdRef] = $wordsInSequence;
-                    $frequenciesTable[$sequenceIdRef]['staringSequence'] = true;
+                    $frequenciesTable[$sequenceIdRef]['startingSequence'] = true;
                 }
 
                 // update statistics

@@ -1,4 +1,0 @@
-parameters:
-    ignoreErrors:
-        - '#Possibly invalid array key type array\<string, mixed\>\|int\.#'
-        - '#Parameter \#1 \$frequenciesTable of method CliffordVickrey\\Malarkey\\Generator\\ChainGenerator\:\:build\(\) expects array\<int, array\>, array\<int\|string, array\> given\.#'
