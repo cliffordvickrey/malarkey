@@ -6,7 +6,6 @@ namespace Tests\CliffordVickrey\Malarkey\Generator;
 
 use CliffordVickrey\Malarkey\Generator\TextGeneratorOptions;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 
 class TextGeneratorOptionsTest extends TestCase
 {
