@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\CliffordVickrey\Malarkey\Exception;
 
 use CliffordVickrey\Malarkey\Exception\TypeException;
-use PHPStan\Testing\TestCase;
+use PHPUnit\Framework\TestCase;
 use stdClass;
 
 class TypeExceptionTest extends TestCase
