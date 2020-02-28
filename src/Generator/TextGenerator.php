@@ -63,22 +63,21 @@ class TextGenerator implements TextGeneratorInterface
 
         $wordsInSequence = self::getRandomStartingWords($chain);
 
-        /** @var array<string, bool> $endsOfSentencesMemo */
-        $endsOfSentencesMemo = [];
-
         $chunkCount = 0;
+        $isLineBreak = false;
         $sentenceCount = 0;
+        $valid = false;
+        $words = [];
         $wordCount = 0;
 
         // memoize function results for speed
 
         /** @var array<string, array> $wordDataMemo */
         $wordDataMemo = [];
-        $isLineBreak = false;
+        /** @var array<string, bool> $endsOfSentencesMemo */
+        $endsOfSentencesMemo = [];
 
         // the main loop
-        $valid = false;
-        $words = [];
 
         while (true) {
             if ($valid) {

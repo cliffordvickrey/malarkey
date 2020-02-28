@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace CliffordVickrey\Malarkey\Utility;
 
-use function array_map;
 use function array_merge;
 use function array_pop;
 use function array_reduce;
 use function explode;
-use function ltrim;
-use function preg_match;
 use function preg_replace;
 use function str_replace;
 use function trim;

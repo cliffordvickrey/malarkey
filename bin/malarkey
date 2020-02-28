@@ -210,13 +210,13 @@ call_user_func(function (array $arguments): void {
                 throw new InvalidArgumentException('Required argument "source" missing');
             }
 
+            if (!isset($options['lookbehind'])) {
+                $options['lookbehind'] = 2;
+            }
+
             $textGeneratorOptions = null;
 
             if ($generateText) {
-                if (!isset($options['lookbehind'])) {
-                    $options['lookbehind'] = 2;
-                }
-
                 $textGeneratorOptions = TextGeneratorOptions::fromArray([
                     'chunkSeparator' => $options['no-line-breaks'] ? ' ' : (PHP_EOL . PHP_EOL),
                     'maxChunks' => $options['chunks'],

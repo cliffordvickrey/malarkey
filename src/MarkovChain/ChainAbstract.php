@@ -31,7 +31,7 @@ abstract class ChainAbstract implements ChainInterface, Countable, Serializable
     /**
      * ChainAbstract constructor.
      */
-    final function __construct()
+    final public function __construct()
     {
     }
 
