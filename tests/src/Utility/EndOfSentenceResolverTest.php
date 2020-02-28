@@ -12,7 +12,7 @@ class EndOfSentenceResolverTest extends TestCase
     public function testIsEndOfSentence(): void
     {
         $resolver = new EndOfSentenceResolver();
-        $this->assertFalse($resolver->isEndOfSentence("I'll"));
+        $this->assertFalse($resolver->isEndOfSentence("I'd"));
         $this->assertFalse($resolver->isEndOfSentence('buy'));
         $this->assertFalse($resolver->isEndOfSentence('that'));
         $this->assertFalse($resolver->isEndOfSentence('for'));

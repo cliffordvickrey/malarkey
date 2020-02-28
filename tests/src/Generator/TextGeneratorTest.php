@@ -23,7 +23,7 @@ class TextGeneratorTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        $text = "I'll buy that for a dollar! I'll buy this for two dollars! I'll buy that for a dollar!";
+        $text = "I'd buy that for a dollar! I'd buy this for two dollars! I'd buy that for a dollar!";
         $chainGenerator = new ChainGenerator();
         self::$chain = $chainGenerator->generateChain($text);
     }
@@ -54,13 +54,13 @@ class TextGeneratorTest extends TestCase
     public function testGenerateTextOneSentence(): void
     {
         $output = $this->textGenerator->generateText(self::$chain, ['maxSentences' => 1]);
-        $this->assertContains($output, ["I'll buy that for a dollar!", "I'll buy this for two dollars!"]);
+        $this->assertContains($output, ["I'd buy that for a dollar!", "I'd buy this for two dollars!"]);
     }
 
     public function testGenerateTextOneWord(): void
     {
         $output = $this->textGenerator->generateText(self::$chain, ['maxWords' => 1]);
-        $this->assertEquals("I'll", $output);
+        $this->assertEquals("I'd", $output);
     }
 
     public function testGenerateTextInvalidOptions(): void

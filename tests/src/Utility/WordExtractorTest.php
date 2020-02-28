@@ -13,7 +13,7 @@ class WordExtractorTest extends TestCase
     {
         $extractor = new WordExtractor();
         $text = <<< EOT
-I'll     buy    that    for   a     
+I'd     buy    that    for   a     
 
 
 
@@ -23,7 +23,7 @@ I'll     buy    that    for   a
 EOT;
 
         $this->assertEquals([
-            "I'll",
+            "I'd",
             'buy',
             'that',
             'for',

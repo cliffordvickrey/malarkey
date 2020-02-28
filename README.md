@@ -25,18 +25,18 @@ $ composer require cliffordvickrey/malarkey
 ## Usage
 
 ```php
-$text = "I'll buy that for a dollar! But I'll buy this for two dollars!";
+$text = "I'd buy that for a dollar! But I'd buy this for two dollars!";
 
 $chainGenerator = new CliffordVickrey\Malarkey\Generator\ChainGenerator();
 $markovChain = $chainGenerator->generateChain($text, 2);
 
 // the chain stores probability data for every possible state, like so
-var_dump($markovChain->getFrequenciesBySequence("I'll", 'buy')); // ['that' => 1, 'this' => 1]
+var_dump($markovChain->getFrequenciesBySequence("I'd", 'buy')); // ['that' => 1, 'this' => 1]
 
 $textGenerator = new CliffordVickrey\Malarkey\Generator\TextGenerator();
 $output = $textGenerator->generateText($markovChain, ['maxSentences' => 1]);
 
-var_dump($output); // e.g. I'll buy that for two dollars!
+var_dump($output); // e.g. I'd buy that for two dollars!
 ```
 
 Command line text generation utilities are also available. For help, run this in your project folder:
@@ -59,7 +59,7 @@ Arguments:
 The returned chain object implements `Serializable` and `JsonSerializable` for persistence and portability purposes.
 
 ```php
-$text = "I'll buy that for a dollar! But I'll buy this for two dollars!";
+$text = "I'd buy that for a dollar! But I'd buy this for two dollars!";
 
 $chainGenerator = new \CliffordVickrey\Malarkey\Generator\ChainGenerator();
 /** @var CliffordVickrey\Malarkey\MarkovChain\Chain $markovChain */

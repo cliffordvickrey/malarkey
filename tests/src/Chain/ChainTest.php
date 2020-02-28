@@ -22,19 +22,19 @@ class ChainTest extends TestCase
     public function setUp(): void
     {
         $this->chain = new Chain();
-        $this->chain->add(["I'll", 'buy'], ['that' => 1]);
+        $this->chain->add(["I'd", 'buy'], ['that' => 1]);
         $this->chain->add(['buy', 'that'], ['for' => 1]);
         $this->chain->add(['that', 'for'], ['a' => 1]);
         $this->chain->add(['for', 'a'], ['dollar!' => 1]);
-        $this->chain->add(['a', 'dollar!'], ["I'll" => 1]);
-        $this->chain->add(['dollar!', "I'll"], ['buy' => 1]);
+        $this->chain->add(['a', 'dollar!'], ["I'd" => 1]);
+        $this->chain->add(['dollar!', "I'd"], ['buy' => 1]);
     }
 
     public function testJsonSerialize(): void
     {
         $this->assertEquals([
             [
-                'words' => ["I'll", 'buy'],
+                'words' => ["I'd", 'buy'],
                 'frequencies' => ['that' => 1],
                 'startingSequence' => true
             ],
@@ -55,11 +55,11 @@ class ChainTest extends TestCase
             ],
             [
                 'words' => ['a', 'dollar!'],
-                'frequencies' => ["I'll" => 1],
+                'frequencies' => ["I'd" => 1],
                 'startingSequence' => false
             ],
             [
-                'words' => ['dollar!', "I'll"],
+                'words' => ['dollar!', "I'd"],
                 'frequencies' => ['buy' => 1],
                 'startingSequence' => false
             ]
@@ -73,7 +73,7 @@ class ChainTest extends TestCase
 
     public function testGetPossibleStartingSequences(): void
     {
-        $this->assertEquals([["I'll", 'buy']], $this->chain->getPossibleStartingSequences());
+        $this->assertEquals([["I'd", 'buy']], $this->chain->getPossibleStartingSequences());
     }
 
     public function testGetFrequenciesBySequence(): void

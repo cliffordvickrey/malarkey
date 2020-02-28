@@ -21,7 +21,7 @@ class ChainGeneratorTest extends TestCase
     public function setUp(): void
     {
         $this->chainGenerator = new ChainGenerator();
-        $this->text = "I'll buy that for a dollar! I'll buy this for two dollars! I'll buy that for a dollar!";
+        $this->text = "I'd buy that for a dollar! I'd buy this for two dollars! I'd buy that for a dollar!";
     }
 
     public function testGenerateChain(): void
@@ -35,7 +35,7 @@ class ChainGeneratorTest extends TestCase
                     array(
                         'words' =>
                             array(
-                                0 => 'I\'ll',
+                                0 => 'I\'d',
                                 1 => 'buy',
                             ),
                         'frequencies' =>
@@ -93,7 +93,7 @@ class ChainGeneratorTest extends TestCase
                             ),
                         'frequencies' =>
                             array(
-                                'I\'ll' => 1,
+                                'I\'d' => 1,
                                 '' => 1,
                             ),
                         'startingSequence' => false,
@@ -103,7 +103,7 @@ class ChainGeneratorTest extends TestCase
                         'words' =>
                             array(
                                 0 => 'dollar!',
-                                1 => 'I\'ll',
+                                1 => 'I\'d',
                             ),
                         'frequencies' =>
                             array(
@@ -159,7 +159,7 @@ class ChainGeneratorTest extends TestCase
                             ),
                         'frequencies' =>
                             array(
-                                'I\'ll' => 1,
+                                'I\'d' => 1,
                             ),
                         'startingSequence' => false,
                     ),
@@ -168,7 +168,7 @@ class ChainGeneratorTest extends TestCase
                         'words' =>
                             array(
                                 0 => 'dollars!',
-                                1 => 'I\'ll',
+                                1 => 'I\'d',
                             ),
                         'frequencies' =>
                             array(
@@ -185,7 +185,7 @@ class ChainGeneratorTest extends TestCase
                             ),
                         'frequencies' =>
                             array(
-                                'I\'ll' => 1,
+                                'I\'d' => 1,
                             ),
                         'startingSequence' => false,
                     ),
@@ -194,7 +194,7 @@ class ChainGeneratorTest extends TestCase
                         'words' =>
                             array(
                                 0 => '',
-                                1 => 'I\'ll',
+                                1 => 'I\'d',
                             ),
                         'frequencies' =>
                             array(
