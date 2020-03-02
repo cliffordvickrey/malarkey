@@ -139,7 +139,7 @@ class TextGenerator implements TextGeneratorInterface
             if ($isLineBreak && '' === $nextWord) {
                 // two line breaks in a row: let's increment the word count to prevent an infinite loop
                 $wordCount++;
-                $maxChunks++;
+                $chunkCount++;
             } else {
                 $isLineBreak = '' === $nextWord;
                 if ($isLineBreak) {

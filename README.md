@@ -42,10 +42,10 @@ var_dump($output); // e.g. I'd buy that for two dollars!
 Command line text generation utilities are also available. For help, run this in your project folder:
 
 ```bash
-$ php vendor/bin/malarkey
+$ ./vendor/bin/malarkey
 ```
 
-### TextGenerator
+### ChainGenerator
 
 #### @generateChain
 Generates a Markov chain from source text.

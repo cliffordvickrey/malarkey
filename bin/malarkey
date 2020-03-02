@@ -12,6 +12,7 @@ use CliffordVickrey\Malarkey\Generator\ChainGenerator;
 use CliffordVickrey\Malarkey\Generator\TextGenerator;
 use CliffordVickrey\Malarkey\Generator\TextGeneratorOptions;
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
+use CliffordVickrey\Malarkey\MarkovChain\ChainAbstract;
 use CliffordVickrey\Malarkey\MarkovChain\ChainWithoutJsonSupport;
 
 call_user_func(function (array $arguments): void {
@@ -249,6 +250,10 @@ call_user_func(function (array $arguments): void {
                     Chain::class,
                     ChainWithoutJsonSupport::class
                 ]]);
+
+                if (!($chain instanceof ChainAbstract)) {
+                    throw new RuntimeException('Failed to unserialize object');
+                }
             } else {
                 $action = 'generated';
                 $chainGenerator = new ChainGenerator();
