@@ -11,6 +11,8 @@ A Markov chain generator takes text and, for all sequences of words, models the 
 
 For any given word, it is possible to "look behind" any number of words to determine how likely the word is to be the next in the sequence. The more words the text generator looks behind, the less random and more human-seeming will be the output.
 
+See this library in action at [https://www.cliffordvickrey.com/malarkey/](https://www.cliffordvickrey.com/malarkey/)
+
 ## Requirements
 
 * PHP 7.1 or higher
