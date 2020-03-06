@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\CliffordVickrey\Malarkey\Chain;
 
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
-use CliffordVickrey\Malarkey\MarkovChain\ChainAbstract;
 use CliffordVickrey\Malarkey\MarkovChain\ChainBuilder;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -114,6 +113,18 @@ class ChainTest extends TestCase
     }
 
     /**
+     * @param string $property
+     * @throws ReflectionException
+     */
+    private function nullProperty(string $property): void
+    {
+        $reflectionClass = new ReflectionClass(Chain::class);
+        $property = $reflectionClass->getProperty($property);
+        $property->setAccessible(true);
+        $property->setValue($this->chain, null);
+    }
+
+    /**
      * @throws ReflectionException
      */
     public function testUnSerializeNullFrequenciesTree(): void
@@ -165,7 +176,7 @@ class ChainTest extends TestCase
     public function testAddInvalidNumberOfWords(): void
     {
         $this->expectExceptionMessage('Expected sequence to have 2 word(s); got 3');
-        $this->chain->add(['for', 'two',' dollars'], ['a' => 1]);
+        $this->chain->add(['for', 'two', ' dollars'], ['a' => 1]);
     }
 
     public function testAddSequenceNonUnique(): void
@@ -182,17 +193,5 @@ class ChainTest extends TestCase
         $chainBuilder->setLookBehind(1);
         $chainBuilder->setPossibleStartingSequences([]);
         $this->assertInstanceOf(Chain::class, Chain::build($chainBuilder));
-    }
-
-    /**
-     * @param string $property
-     * @throws ReflectionException
-     */
-    private function nullProperty(string $property): void
-    {
-        $reflectionClass = new ReflectionClass(ChainAbstract::class);
-        $property = $reflectionClass->getProperty($property);
-        $property->setAccessible(true);
-        $property->setValue($this->chain, null);
     }
 }

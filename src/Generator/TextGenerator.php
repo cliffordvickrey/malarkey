@@ -233,7 +233,7 @@ class TextGenerator implements TextGeneratorInterface
             throw new InvalidArgumentException('Cannot generate text; starting words are empty');
         }
 
-        return array_map('strval', $startingWords);
+        return $startingWords;
     }
 
     /**
@@ -279,28 +279,28 @@ class TextGenerator implements TextGeneratorInterface
      */
     private static function toText(array $words, string $chunkSeparator, string $wordSeparator): string
     {
-        $inSentence = false;
-        $sentenceCount = 0;
-        $wordsBySentence = [];
+        $chunkCount = 0;
+        $inChunk = false;
+        $wordsByChunk = [];
 
         foreach ($words as $word) {
             $isLineBreak = '' === $word;
 
-            if ($isLineBreak && $inSentence) {
-                $sentenceCount++;
-                $inSentence = false;
-            } elseif (!$isLineBreak && isset($wordsBySentence[$sentenceCount])) {
-                $wordsBySentence[$sentenceCount][] = $word;
-                $inSentence = true;
+            if ($isLineBreak && $inChunk) {
+                $chunkCount++;
+                $inChunk = false;
+            } elseif (!$isLineBreak && isset($wordsByChunk[$chunkCount])) {
+                $wordsByChunk[$chunkCount][] = $word;
+                $inChunk = true;
             } elseif (!$isLineBreak) {
-                $wordsBySentence[$sentenceCount] = [$word];
-                $inSentence = true;
+                $wordsByChunk[$chunkCount] = [$word];
+                $inChunk = true;
             }
         }
 
         $sentences = array_map(function ($wordsInSentence) use ($wordSeparator): string {
             return implode($wordSeparator, $wordsInSentence);
-        }, $wordsBySentence);
+        }, $wordsByChunk);
 
         return trim(implode($chunkSeparator, $sentences));
     }

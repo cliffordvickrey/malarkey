@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.com/cliffordvickrey/malarkey.svg?branch=master)](https://travis-ci.com/cliffordvickrey/malarkey/)
 [![Coverage Status](https://coveralls.io/repos/github/cliffordvickrey/malarkey/badge.svg)](https://coveralls.io/github/cliffordvickrey/malarkey)
 
+**See this library in action at [https://www.cliffordvickrey.com/malarkey/](https://www.cliffordvickrey.com/malarkey/)**
+
 This package generates nonsensical but realistic-sounding text (malarkey!) using a simple Markov chain algorithm.
 
 In a Markov chain system, all possible states are determined by previous states. In the context of text, it models the transition from one state ("hello") to a future state ("world!") using a set of fixed probabilities.
@@ -10,8 +12,6 @@ In a Markov chain system, all possible states are determined by previous states.
 A Markov chain generator takes text and, for all sequences of words, models the likelihoods of the next word in the sequence. ("world!" might have a 75% chance of following "Hello," and "Nurse!" might have a 25% chance). It is straightforward to visit the chain and, following these probabilities, emit gibberish that mimics human writing.
 
 For any given word, it is possible to "look behind" any number of words to determine how likely the word is to be the next in the sequence. The more words the text generator looks behind, the less random and more human-seeming will be the output.
-
-See this library in action at [https://www.cliffordvickrey.com/malarkey/](https://www.cliffordvickrey.com/malarkey/)
 
 ## Requirements
 

@@ -15,5 +15,5 @@ interface ChainGeneratorInterface
      * The higher the number, the more coherent will be the randomly-generated text
      * @return ChainInterface The generated chain
      */
-    public function generateChain(string $text, int $lookBehind = 2): ChainInterface;
+    public function generateChain(string $text, int $lookBehind = 2);
 }

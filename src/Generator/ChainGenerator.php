@@ -6,10 +6,7 @@ namespace CliffordVickrey\Malarkey\Generator;
 
 use CliffordVickrey\Malarkey\Exception\InvalidArgumentException;
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
-use CliffordVickrey\Malarkey\MarkovChain\ChainAbstract;
 use CliffordVickrey\Malarkey\MarkovChain\ChainBuilder;
-use CliffordVickrey\Malarkey\MarkovChain\ChainInterface;
-use CliffordVickrey\Malarkey\MarkovChain\ChainWithoutJsonSupport;
 use CliffordVickrey\Malarkey\Utility\WordExtractor;
 use CliffordVickrey\Malarkey\Utility\WordExtractorInterface;
 use function array_merge;
@@ -19,7 +16,6 @@ use function array_values;
 use function count;
 use function current;
 use function end;
-use function interface_exists;
 use function reset;
 
 /**
@@ -33,8 +29,6 @@ class ChainGenerator implements ChainGeneratorInterface
     private $lastGeneratedWordCount;
     /** @var WordExtractorInterface */
     private $wordExtractor;
-    /** @var bool */
-    private $jsonSupport;
 
     /**
      * ChainGenerator constructor.
@@ -43,15 +37,15 @@ class ChainGenerator implements ChainGeneratorInterface
     public function __construct(?WordExtractorInterface $wordExtractor = null)
     {
         $this->wordExtractor = $wordExtractor ?? new WordExtractor();
-        $this->jsonSupport = interface_exists('JsonSerializable');
     }
 
     /**
      * This is a very procedural implementation. What follows is not pretty, or particularly memory efficient, but
      * rather fast!
      * (@inheritDoc)
+     * @return Chain
      */
-    public function generateChain(string $text, int $lookBehind = 2): ChainInterface
+    public function generateChain(string $text, int $lookBehind = 2)
     {
         if ($lookBehind < 1) {
             throw new InvalidArgumentException('Look behind cannot be less than 1');
@@ -81,8 +75,8 @@ class ChainGenerator implements ChainGeneratorInterface
 
         // here, we memoize information about each word
         $endOfChunk = false;
-        /** @var array<string, bool> $startsOfChunksMap */
-        $startsOfChunksMap = [];
+        /** @var array<string, bool> $startsOfChunksMemo */
+        $startsOfChunksMemo = [];
 
         // starting word sequences: what words can be used at the start of the chain?
         /** @var array<int, array<int, string>> $startingSequences */
@@ -111,11 +105,7 @@ class ChainGenerator implements ChainGeneratorInterface
                 $startOfChunk = true;
             }
 
-            if (!isset($startsOfChunksMap[$word])) {
-                // persist start of chunk value to the cache
-                $startsOfChunksMap[$word] = $startOfChunk;
-            }
-
+            $startsOfChunksMemo[] = $startOfChunk;
             $endOfChunk = $isNewLine;
 
             if (!$valid) {
@@ -154,7 +144,7 @@ class ChainGenerator implements ChainGeneratorInterface
                 $sequenceIdRef = (int)$sequenceIdRef;
                 $frequenciesTable[$sequenceIdRef]['frequencies'] = $frequenciesTreeRef;
 
-                if ($startsOfChunksMap[$wordsInSequence[0]]) {
+                if ($startsOfChunksMemo[0]) {
                     $startingSequences[$sequenceIdRef] = $wordsInSequence;
                     $frequenciesTable[$sequenceIdRef]['startingSequence'] = true;
                 }
@@ -168,6 +158,7 @@ class ChainGenerator implements ChainGeneratorInterface
 
                 // shift off the first word in the sequence
                 array_shift($wordsInSequence);
+                array_shift($startsOfChunksMemo);
             }
 
             $wordsInSequence[] = $word;
@@ -215,14 +206,14 @@ class ChainGenerator implements ChainGeneratorInterface
      * @param array<string, mixed> $frequenciesTree
      * @param int $lookBehind
      * @param array<int, array<int, string>> $startingSequences
-     * @return ChainAbstract
+     * @return Chain
      */
     private function build(
         array $frequenciesTable,
         array $frequenciesTree,
         int $lookBehind,
         array $startingSequences
-    ): ChainAbstract
+    ): Chain
     {
         // build the chain
         $chainBuilder = new ChainBuilder();
@@ -230,13 +221,6 @@ class ChainGenerator implements ChainGeneratorInterface
         $chainBuilder->setFrequenciesTree($frequenciesTree);
         $chainBuilder->setLookBehind($lookBehind);
         $chainBuilder->setPossibleStartingSequences($startingSequences);
-
-        // if ext-json wasn't built with the running PHP instance, return a Chain object that doesn't implement
-        // \JsonSerializable
-        if (!$this->jsonSupport) {
-            return ChainWithoutJsonSupport::build($chainBuilder);
-        }
-
         return Chain::build($chainBuilder);
     }
 

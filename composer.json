@@ -1,40 +1,43 @@
 {
-    "name": "cliffordvickrey/malarkey",
-    "description": "Generates nonsensical but realistic-sounding text using a Markov chain algorithm",
-    "type": "library",
-    "license": "MIT",
-    "website": "https://www.cliffordvickrey.com/malarkey/",
-    "keywords": [
-        "markov chain",
-        "text generator"
-    ],
-    "authors": [
-        {
-            "name": "Clifford Vickrey",
-            "email": "clifforddavidvickrey@gmail.com"
-        }
-    ],
-    "require": {
-        "php": ">=7.1"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^6.0|^7.0|^8.0|^9.0",
-        "phpstan/phpstan": "^0.12.9"
-    },
-    "autoload": {
-        "psr-4": {
-            "CliffordVickrey\\Malarkey\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\CliffordVickrey\\Malarkey\\": "tests/src/"
-        }
-    },
-    "bin": ["bin/malarkey"],
-    "scripts": {
-        "analyze": "phpstan analyse bin src tests/src --level 7",
-        "malarkey": "@php bin/malarkey",
-        "test": "phpunit"
+  "name": "cliffordvickrey/malarkey",
+  "description": "Generates nonsensical but realistic-sounding text using a Markov chain algorithm",
+  "type": "library",
+  "license": "MIT",
+  "homepage": "https://www.cliffordvickrey.com/malarkey/",
+  "keywords": [
+    "markov chain",
+    "text generator"
+  ],
+  "authors": [
+    {
+      "name": "Clifford Vickrey",
+      "email": "clifforddavidvickrey@gmail.com"
     }
+  ],
+  "require": {
+    "ext-json": "*",
+    "php": ">=7.1"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^6.0|^7.0|^8.0|^9.0",
+    "phpstan/phpstan": "^0.12.9"
+  },
+  "autoload": {
+    "psr-4": {
+      "CliffordVickrey\\Malarkey\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\CliffordVickrey\\Malarkey\\": "tests/src/"
+    }
+  },
+  "bin": [
+    "bin/malarkey"
+  ],
+  "scripts": {
+    "analyze": "phpstan analyse bin src tests/src --level 7",
+    "malarkey": "@php bin/malarkey",
+    "test": "phpunit"
+  }
 }

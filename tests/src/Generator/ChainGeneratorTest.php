@@ -6,10 +6,7 @@ namespace Tests\CliffordVickrey\Malarkey\Generator;
 
 use CliffordVickrey\Malarkey\Generator\ChainGenerator;
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
-use CliffordVickrey\Malarkey\MarkovChain\ChainWithoutJsonSupport;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use ReflectionException;
 
 class ChainGeneratorTest extends TestCase
 {
@@ -235,18 +232,5 @@ class ChainGeneratorTest extends TestCase
         /** @var Chain $chain */
         $chain = $this->chainGenerator->generateChain('');
         $this->assertCount(2, $chain->jsonSerialize());
-    }
-
-    /**
-     * @throws ReflectionException
-     */
-    public function testGenerateChainNoJsonSupport(): void
-    {
-        $reflectionClass = new ReflectionClass(ChainGenerator::class);
-        $property = $reflectionClass->getProperty('jsonSupport');
-        $property->setAccessible(true);
-        $property->setValue($this->chainGenerator, false);
-        $chain = $this->chainGenerator->generateChain($this->text);
-        $this->assertInstanceOf(ChainWithoutJsonSupport::class, $chain);
     }
 }

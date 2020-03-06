@@ -13,7 +13,6 @@ use CliffordVickrey\Malarkey\Generator\TextGenerator;
 use CliffordVickrey\Malarkey\Generator\TextGeneratorOptions;
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
 use CliffordVickrey\Malarkey\MarkovChain\ChainAbstract;
-use CliffordVickrey\Malarkey\MarkovChain\ChainWithoutJsonSupport;
 
 call_user_func(function (array $arguments): void {
     foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php'] as $file) {
@@ -246,10 +245,7 @@ call_user_func(function (array $arguments): void {
 
             if (isset($options['unserialize']) && $options['unserialize']) {
                 $action = 'unserialized';
-                $chain = unserialize($text, ['allowed_classes' => [
-                    Chain::class,
-                    ChainWithoutJsonSupport::class
-                ]]);
+                $chain = unserialize($text, ['allowed_classes' => [Chain::class]]);
 
                 if (!($chain instanceof ChainAbstract)) {
                     throw new RuntimeException('Failed to unserialize object');
@@ -298,7 +294,7 @@ call_user_func(function (array $arguments): void {
 
         }
     } catch (InvalidArgumentException $e) {
-        $output = sprintf('%s. Run "malarkey help" to see valid commands and arguments', $e->getMessage());
+        $output = sprintf('%s%sRun "malarkey help" to see valid commands and arguments', $e->getMessage(), PHP_EOL);
         $returnCode = 1;
     } catch (Throwable $e) {
         $output = sprintf('Fatal error: %s', $e->getMessage());
