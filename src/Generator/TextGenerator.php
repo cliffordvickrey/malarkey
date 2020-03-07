@@ -298,10 +298,10 @@ class TextGenerator implements TextGeneratorInterface
             }
         }
 
-        $sentences = array_map(function ($wordsInSentence) use ($wordSeparator): string {
-            return implode($wordSeparator, $wordsInSentence);
+        $chunks = array_map(function ($wordsInChunk) use ($wordSeparator): string {
+            return implode($wordSeparator, $wordsInChunk);
         }, $wordsByChunk);
 
-        return trim(implode($chunkSeparator, $sentences));
+        return trim(implode($chunkSeparator, $chunks));
     }
 }

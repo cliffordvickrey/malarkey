@@ -12,7 +12,6 @@ use CliffordVickrey\Malarkey\Generator\ChainGenerator;
 use CliffordVickrey\Malarkey\Generator\TextGenerator;
 use CliffordVickrey\Malarkey\Generator\TextGeneratorOptions;
 use CliffordVickrey\Malarkey\MarkovChain\Chain;
-use CliffordVickrey\Malarkey\MarkovChain\ChainAbstract;
 
 call_user_func(function (array $arguments): void {
     foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php'] as $file) {
@@ -247,7 +246,7 @@ call_user_func(function (array $arguments): void {
                 $action = 'unserialized';
                 $chain = unserialize($text, ['allowed_classes' => [Chain::class]]);
 
-                if (!($chain instanceof ChainAbstract)) {
+                if (!($chain instanceof Chain)) {
                     throw new RuntimeException('Failed to unserialize object');
                 }
             } else {
